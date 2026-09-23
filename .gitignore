@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 构建产物
+build/
+dist/
+
+# 本地数据（真实论文库与配置在 ~/.arxiver，不入库）
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# 测试运行产物：界面截图与推送记录含真实抓取结果
+tests/_ui_shots/
+tests/_api_pushes.json
+
+# AI 助手会话记录
+.workbuddy-ai/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Arxiver</title>
+<style>
+:root{
+  --bg:#f4f6fb;--card:#ffffff;--text:#1f2937;--muted:#6b7280;--border:#e5e7eb;
+  --side:#111827;--side2:#1f2937;--accent:#6366f1;--accent2:#4f46e5;
+  --chip:#eef2ff;--chiptext:#4338ca;--green:#10b981;--red:#ef4444;--amber:#f59e0b;
+  --shadow:0 4px 14px rgba(0,0,0,.07);--input:#fff;--hover-border:#a5b4fc;
+}
+body.dark{
+  --bg:#0f172a;--card:#1e293b;--text:#e5e7eb;--muted:#94a3b8;--border:#334155;
+  --side:#0b1220;--side2:#1e293b;--accent:#818cf8;--accent2:#6366f1;
+  --chip:#312e81;--chiptext:#c7d2fe;--shadow:0 4px 14px rgba(0,0,0,.4);--input:#0f172a;--hover-border:#6366f1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;font-size:14px}
+aside{width:200px;background:var(--side);color:#e5e7eb;display:flex;flex-direction:column;flex-shrink:0;position:relative}
+.logo{font-size:21px;font-weight:700;padding:20px 18px;color:#fff;display:flex;align-items:center;gap:9px}
+.logo .dot{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#818cf8,#4f46e5);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.logo span{color:#818cf8}
+nav{flex:1;padding:6px 10px}
+nav button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;margin:2px 0;border:none;background:none;color:#d1d5db;border-radius:9px;cursor:pointer;font-size:14px;text-align:left}
+nav button:hover{background:var(--side2)}
+nav button.active{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff}
+.side-foot{padding:12px 18px;font-size:12px;color:#6b7280;border-top:1px solid var(--side2)}
+.side-foot .theme{margin-bottom:10px}
+/* 侧边栏收起 */
+.logo .logo-txt{color:#fff}
+/* 侧边栏收起按钮：骑在右边缘的窄长竖条（与 ApiCluster 同款） */
+.side-toggle{position:absolute;right:-7px;top:50%;transform:translateY(-50%);width:14px;height:60px;display:flex;align-items:center;justify-content:center;background:var(--side2);color:#9ca3af;border:1px solid rgba(255,255,255,.14);border-radius:7px;cursor:pointer;font-size:12px;line-height:1;padding:0;z-index:20;transition:background .18s,color .18s,border-color .18s,box-shadow .18s}
+.side-toggle:hover{color:#fff;background:var(--accent);border-color:var(--accent);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+body.side-collapsed aside{width:60px}
+body.side-collapsed .logo{padding:20px 0;justify-content:center}
+body.side-collapsed .logo .logo-txt{display:none}
+body.side-collapsed nav{padding:6px}
+body.side-collapsed nav button{justify-content:center;padding:11px 0}
+body.side-collapsed nav button .txt{display:none}
+body.side-collapsed .side-foot{padding:12px 6px;text-align:center}
+body.side-collapsed .side-foot .side-text,body.side-collapsed .side-foot .theme{display:none}
+main{flex:1;overflow-y:auto;padding:24px 28px}
+header.bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+h1{font-size:20px;font-weight:700}
+.btn{border:none;border-radius:9px;padding:9px 15px;cursor:pointer;font-size:13px;background:var(--accent);color:#fff;font-weight:600}
+.btn:hover{background:var(--accent2)}
+.btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--border)}
+.btn.small{padding:5px 10px;font-size:12px}
+.btn.green{background:var(--green)}
+.btn.amber{background:var(--amber)}
+.btn.red{background:var(--red)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.stats{display:flex;gap:14px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 20px;flex:1;text-align:center;box-shadow:var(--shadow)}
+.stat b{font-size:24px;display:block;background:linear-gradient(135deg,var(--accent2),var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.stat i{font-style:normal;color:var(--muted);font-size:12px}
+.filters{display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap;align-items:center}
+.filters select,.filters input,.set-row input,.set-row select{padding:8px 11px;border:1px solid var(--border);border-radius:9px;font-size:13px;background:var(--input);color:var(--text)}
+.seg{display:inline-flex;background:var(--bg);border-radius:9px;padding:3px}
+.seg button{border:none;background:none;padding:6px 13px;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.seg button.on{background:var(--accent);color:#fff}
+.crumb{cursor:pointer;color:var(--accent);font-size:13px}
+.crumb:hover{text-decoration:underline}
+.empty{color:var(--muted);text-align:center;padding:70px 0}
+/* 卡片 */
+.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:15px 17px;margin-bottom:12px;box-shadow:var(--shadow);transition:.15s}
+/* 同步过程中新入库的论文：短暂高亮 + 左上角「新」标记 */
+@keyframes freshGlow{0%{border-color:var(--accent);box-shadow:0 0 0 4px rgba(99,102,241,.20)}60%{border-color:var(--accent);box-shadow:0 0 0 4px rgba(99,102,241,.10)}100%{border-color:var(--border);box-shadow:var(--shadow)}}
+.card.fresh{animation:freshGlow 2.8s ease-out}
+.card.fresh::after{content:"新";position:absolute;top:-8px;left:14px;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:1px}
+.card h3{font-size:15px;line-height:1.45;font-weight:600}
+.card .meta{color:var(--muted);font-size:12px;margin-top:7px;line-height:1.6}
+.authors-short{display:inline-block;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.auth-toggle{color:var(--accent);cursor:pointer;font-size:12px;user-select:none}
+.auth-toggle:hover{text-decoration:underline}
+.card .actions{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+.card .abstext{color:var(--text);font-size:13.5px;line-height:1.75;margin-top:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card .abszh{color:var(--accent);font-size:13px;line-height:1.7;margin-top:6px;background:var(--chip);border-radius:8px;padding:9px 11px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+/* 摘要默认截断 3 行，「展开全文」按需展开（展开控件本身不参与卡片选中） */
+.card .abstext.open,.card .abszh.open{-webkit-line-clamp:unset;display:block;overflow:visible}
+.abstoggle{display:inline-block;color:var(--accent);cursor:pointer;font-size:12px;user-select:none;margin-top:5px}
+.abstoggle:hover{text-decoration:underline}
+.card .trow{display:flex;align-items:baseline;gap:9px;padding-right:26px}
+.card-x{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;border:none;background:transparent;color:var(--muted);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;z-index:2}
+.card-x:hover{background:var(--red);color:#fff}
+.hchk{flex-shrink:0;width:15px;height:15px;cursor:pointer;accent-color:var(--accent);align-self:center}
+/* 资源管理器式选择：整卡/整行可点选，选中态用描边+底色表达 */
+#home-list .card,#star-body .card,.gcard{cursor:default}
+#home-list .card:hover,#star-body .card:hover{border-color:var(--hover-border)}
+.card.sel,.gcard.sel{border-color:var(--accent);background:rgba(99,102,241,.07);box-shadow:0 0 0 3px rgba(99,102,241,.20)}
+.tbl tbody tr{cursor:default}
+.tbl tbody tr:hover{background:transparent}
+.tbl tbody tr:hover td{background:var(--chip)}
+.tbl tbody tr.sel td{background:rgba(99,102,241,.13)}
+.tbl tbody tr.sel:hover td{background:rgba(99,102,241,.18)}
+.tbl tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.sel-hint{font-size:12px;color:var(--muted);white-space:nowrap}
+.sel-hint.on{color:var(--green);font-weight:600}
+/* Windows 最大化后不画窗口描边，内容直接贴屏幕边、看不出边界；自己补一圈 */
+body.maxed::after{content:"";position:fixed;inset:0;border:1px solid var(--border);pointer-events:none;z-index:900}
+body.dark.maxed::after{border-color:#3f4c63}
+.sel-info{font-size:12px;color:var(--accent);font-weight:600;white-space:nowrap}
+/* 下载管理 */
+.dl-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.dl-item .dl-head{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.dl-item .dl-head b{font-weight:600;line-height:1.4}
+.dl-item .dl-meta{color:var(--muted);font-size:12px;margin-top:6px;word-break:break-all;line-height:1.5}
+.dlbar{height:6px;background:var(--chip);border-radius:3px;margin-top:9px;overflow:hidden}
+.dlbar-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .2s}
+.dl-item.done{border-left:3px solid #10b981}
+.dl-item.failed{border-left:3px solid var(--red)}
+.dl-sep{font-size:12px;color:var(--muted);margin:16px 0 10px;font-weight:600}
+.card .pdate{color:var(--muted);font-size:12px;flex-shrink:0;white-space:nowrap}
+.card .ai-result{margin-top:10px}
+.card .tag-note{border-top:1px dashed var(--border);margin-top:12px;padding-top:12px}
+.sim-card{border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:11px 13px;margin-top:8px;cursor:pointer;background:var(--bg);transition:.15s}
+.sim-card:hover{border-color:var(--accent)}
+.sim-card .sim-title{font-size:13.5px;font-weight:600;line-height:1.5;margin-top:4px}
+.sim-card .sim-abs{color:var(--muted);font-size:12.5px;line-height:1.7;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .zhtitle{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.5}
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.chip{background:var(--chip);color:var(--chiptext);border-radius:20px;padding:2px 10px;font-size:11px}
+.tag{background:var(--chip);color:var(--chiptext);border-radius:20px;padding:2px 10px;font-size:11px;display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.badge{background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 9px;font-size:11px;flex-shrink:0}
+.badge.src{background:#ecfdf5;color:#065f46}
+.badge.local{background:#e0f2fe;color:#075985}
+.score{color:var(--accent);font-weight:700;font-size:13px}
+.arxid{color:var(--muted);font-size:12px;flex-shrink:0;cursor:pointer}
+.arxid:hover{color:var(--accent)}
+/* 内联展开区 */
+.aiout{background:var(--chip);border-radius:10px;padding:12px;font-size:13px;line-height:1.8;color:var(--chiptext);white-space:pre-wrap;max-height:300px;overflow-y:auto;margin-top:10px}
+/* 论文库视图 */
+.view-tabs{display:inline-flex;background:var(--bg);border-radius:9px;padding:3px}
+.view-tabs button{border:none;background:none;padding:6px 13px;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+.view-tabs button.on{background:var(--accent);color:#fff}
+.tblwrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:var(--bg);text-align:left;padding:10px 12px;color:var(--muted);font-weight:600;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.tbl tbody tr:hover{background:var(--chip)}
+.tbl .ttitle{max-width:330px;word-break:break-all;line-height:1.55;cursor:pointer}
+.tbl .tdim{color:var(--muted);font-size:12px}
+.oplink{color:var(--muted);cursor:pointer;margin-right:12px;font-size:12px;white-space:nowrap}
+.oplink:hover{color:var(--accent)}
+.pager{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;color:var(--muted);font-size:13px;flex-wrap:wrap}
+.pager button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px}
+.pager button.on{background:var(--accent);color:#fff;border-color:transparent}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager select{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--input);color:var(--text);font-size:12px}
+.folder{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 15px;margin:0 10px 10px 0;cursor:pointer;font-size:14px}
+.folder:hover{border-color:var(--accent)}
+/* 平铺视图 */
+.gridwrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.gcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;box-shadow:var(--shadow);position:relative}
+.gcard:hover{border-color:var(--accent)}
+.gcard .gtitle{font-size:13px;font-weight:600;line-height:1.5;max-height:58px;overflow:hidden}
+.gcard .gmeta{color:var(--muted);font-size:11px;margin-top:8px}
+.gcard .gchk{position:absolute;top:8px;left:8px}
+/* 右键菜单 */
+.ctxmenu{position:fixed;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.2);z-index:400;padding:4px;min-width:140px;display:none}
+.ctxmenu div{padding:8px 14px;cursor:pointer;font-size:13px;border-radius:7px}
+.ctxmenu div:hover{background:var(--chip)}
+.ctxmenu div.danger{color:var(--red)}
+.ctxmenu .sep{height:1px;background:var(--border);margin:4px 6px;padding:0}
+/* 设置 */
+.set-group{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:19px;margin-bottom:16px;box-shadow:var(--shadow)}
+.set-group h2{font-size:15px;margin-bottom:13px}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--border);gap:12px;flex-wrap:wrap}
+.set-row:last-child{border-bottom:none}
+.set-row input.long{width:340px}
+.minor-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mtag{background:var(--chip);color:var(--chiptext);border-radius:20px;padding:4px 11px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.mtag b{cursor:pointer;color:var(--accent)}
+.major-chips{display:flex;flex-wrap:wrap;gap:8px}
+.mchip{border:1px solid var(--border);border-radius:20px;padding:6px 14px;cursor:pointer;font-size:13px;background:var(--card)}
+.mchip.on{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;border-color:transparent}
+.switch{position:relative;width:40px;height:22px;display:inline-block;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:22px;transition:.2s}
+.slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked+.slider{background:var(--accent)}
+.switch input:checked+.slider:before{transform:translateX(18px)}
+#toastbox{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:500}
+.tmsg{background:#111827;color:#fff;padding:12px 17px;border-radius:10px;font-size:13px;max-width:400px;box-shadow:0 6px 20px rgba(0,0,0,.3);white-space:pre-line;animation:pop .25s}
+@keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.progress{display:none;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 15px;margin-bottom:16px}
+.progress.show{display:block}
+.prow{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.pdrag{cursor:move;color:var(--muted);font-size:14px;user-select:none;line-height:1;padding:0 2px;flex-shrink:0}
+.pdrag:hover{color:var(--accent)}
+.pcancel{border:none;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;flex-shrink:0}
+.pcancel:hover{color:var(--red)}
+.ptrack{height:7px;background:var(--bg);border-radius:4px;overflow:hidden}
+.pbar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:4px;transition:width .3s}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--chip);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* 垃圾桶 */
+.trash-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.trash-toolbar .chkall{margin-right:6px}
+.trash-card-wrap{position:relative}
+.trash-card-wrap .trash-check{position:absolute;top:13px;left:13px;z-index:2}
+.trash-card-wrap .card{padding-left:42px}
+/* CCF 筛选器 */
+.ccf-filter{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.ccf-filter .ccf-chip{border:1px solid var(--border);border-radius:20px;padding:5px 13px;cursor:pointer;font-size:12px;background:var(--card);transition:.15s}
+.ccf-filter .ccf-chip.on{border-color:transparent;color:#fff}
+.ccf-filter .ccf-chip[data-v="A"].on{background:#ef4444}
+.ccf-filter .ccf-chip[data-v="B"].on{background:#f59e0b}
+.ccf-filter .ccf-chip[data-v="C"].on{background:#6366f1}
+.ccf-filter .ccf-chip[data-v="none"].on{background:#6b7280}
+.ccf-filter .ccf-chip[data-v="journal"].on{background:#10b981}
+.ccf-filter .ccf-chip[data-v="conference"].on{background:#8b5cf6}
+</style>
+</head>
+<body>
+<aside>
+  <div class="logo"><span class="dot">A</span><span class="logo-txt">Arx<span>iver</span></span></div>
+  <nav id="nav">
+    <button data-view="home" class="active" title="前沿探索"><span class="ico">🚀</span><span class="txt">前沿探索</span></button>
+    <button data-view="scholar" title="谷歌学术"><span class="ico">🎓</span><span class="txt">谷歌学术</span></button>
+    <button data-view="library" title="论文库"><span class="ico">📚</span><span class="txt">论文库</span></button>
+    <button data-view="downloads" title="下载"><span class="ico">⬇️</span><span class="txt">下载</span></button>
+    <button data-view="starred" title="收藏"><span class="ico">⭐</span><span class="txt">收藏</span></button>
+    <button data-view="trash" title="垃圾桶"><span class="ico">🗑️</span><span class="txt">垃圾桶</span></button>
+    <button data-view="settings" title="设置"><span class="ico">⚙️</span><span class="txt">设置</span></button>
+  </nav>
+  <div class="side-foot">
+    <div class="theme"><button class="btn small ghost" id="theme-btn" onclick="toggleTheme()">🌙 深色</button></div>
+    <span class="side-text">面向计算机专业研究生<br>目标：发顶会</span>
+  </div>
+  <button class="side-toggle" id="side-toggle" onclick="toggleSidebar()" title="收起侧边栏">‹</button>
+</aside>
+<main>
+  <!-- 前沿探索 -->
+  <section id="view-home">
+    <header class="bar"><h1>前沿探索</h1>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn ghost" id="home-tr-btn" onclick="batchTranslatePage()">🌐 翻译当页</button>
+        <button class="btn ghost" id="home-sm-btn" onclick="batchSummarizePage()">🤖 摘要当页</button>
+        <button class="btn ghost" onclick="batchTranslateAll()">🌐 全部翻译</button>
+        <button class="btn ghost" onclick="batchSummarizeAll()">🤖 全部 AI 摘要</button>
+        <button class="btn ghost" id="btn-refresh" onclick="syncNow()">🔄 立即同步</button>
+        <button class="btn" onclick="downloadTop()">⬇️ 下载 Top</button>
+        <input type="number" id="dl-topn" value="5" min="1" max="30" style="width:60px;padding:8px 6px;border:1px solid var(--border);border-radius:9px;background:var(--input);color:var(--text)">
+        <span class="sel-info" id="home-sel-info"></span>
+        <button class="btn red small" id="home-rm-btn" style="display:none" onclick="batchRemoveHome()">🗑 批量移除</button>
+      </div>
+    </header>
+    <div class="stats">
+      <div class="stat" id="st-filtered-wrap" title="按上面的时间/排序/标签/筛选条件，当前这一共多少条（分页器同一个数）"><b id="st-filtered">-</b><i id="st-filtered-label">当前筛选</i></div>
+      <div class="stat"><b id="st-total">-</b><i>推荐池总数</i></div>
+      <div class="stat"><b id="st-dl">-</b><i>已下载</i></div>
+      <div class="stat"><b id="st-star">-</b><i>已收藏</i></div>
+      <div class="stat" id="st-trash-wrap" style="display:none;cursor:pointer" onclick="document.querySelector('[data-view=trash]').click()"><b id="st-trash" style="color:var(--red)">-</b><i>垃圾桶</i></div>
+    </div>
+    <div class="filters">
+      <div class="seg" id="home-scope" title="推荐池=最近还在被推荐的；已归档=太久没人收藏/下载/标注、自动收起来的（数据没删）">
+        <button data-s="" class="on" onclick="setScope(this)">推荐池</button>
+        <button data-s="archived" onclick="setScope(this)">已归档</button>
+      </div>
+      <div class="seg" id="home-range">
+        <button data-r="all" class="on" onclick="setRange(this)">全部</button>
+        <button data-r="1" onclick="setRange(this)">今天</button>
+        <button data-r="3" onclick="setRange(this)">近3天</button>
+        <button data-r="7" onclick="setRange(this)">本周</button>
+        <button data-r="30" onclick="setRange(this)">本月</button>
+        <button data-r="365" onclick="setRange(this)">今年</button>
+      </div>
+      <select id="home-order" onchange="resetSel('home');homePage=1;loadHome()">
+        <option value="score DESC">相关度</option>
+        <option value="upvotes DESC">热度</option>
+        <option value="citations DESC">引用数</option>
+        <option value="published DESC">最新</option>
+      </select>
+      <select id="home-tag" onchange="resetSel('home');homePage=1;loadHome()"><option value="">全部标签</option></select>
+      <span class="sel-hint" style="margin-left:auto" title="单击选中 / Ctrl 加选 / Shift 连选（可反向）/ 双击打开 / 右键菜单 / 方向键移动 / Enter 打开 / Delete 移除 / Esc 取消">点选 · Ctrl 加选 · Shift 连选 · 方向键 · Enter 打开 · Del 移除</span>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer"><input type="checkbox" id="home-all" onclick="toggleAllHome(this)"> 全选本页</label>
+    </div>
+    <div class="filters">
+      <span style="font-size:12px;color:var(--muted)">筛选：</span>
+      <input type="number" id="home-min-score" placeholder="最低分" min="0" title="最低相关度分数" style="width:90px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;background:var(--input);color:var(--text)" onchange="resetSel('home');homePage=1;loadHome()">
+      <input type="date" id="home-date-from" title="起始日期" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--input);color:var(--text)" onchange="resetSel('home');homePage=1;loadHome()">
+      <span style="color:var(--muted);font-size:12px">至</span>
+      <input type="date" id="home-date-to" title="结束日期" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--input);color:var(--text)" onchange="resetSel('home');homePage=1;loadHome()">
+      <button class="btn small ghost" id="home-filter-clear" onclick="clearHomeFilter()">清除筛选</button>
+    </div>
+    <div id="home-list"></div>
+    <div class="pager" id="home-pager"></div>
+  </section>
+
+  <!-- 谷歌学术（期刊/会议论文） -->
+  <section id="view-scholar" style="display:none">
+    <header class="bar"><h1>谷歌学术</h1>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="sch-q" placeholder="🔍 搜索期刊/会议论文关键词…" style="width:300px;padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--input);color:var(--text)" onkeydown="if(event.key==='Enter')scholarSearch()">
+        <select id="sch-year" style="padding:9px 11px"><option value="">不限年份</option><option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option><option value="2020">2020 起</option></select>
+        <button class="btn" onclick="scholarSearch()">🔍 搜索</button>
+        <button class="btn ghost" id="sch-next" onclick="scholarNext()" style="display:none">下一页</button>
+      </div>
+    </header>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">仅期刊/会议论文（已排除 arXiv 预印本）· <b style="color:var(--red)">CCF-A</b> / <b style="color:var(--amber)">CCF-B</b> / <b style="color:var(--accent)">CCF-C</b> 为中国计算机学会推荐类别</div>
+    <div class="ccf-filter" id="sch-ccf-filter">
+      <span style="font-size:12px;color:var(--muted)">筛选：</span>
+      <span class="ccf-chip" data-v="A" onclick="toggleCcf(this)">CCF-A</span>
+      <span class="ccf-chip" data-v="B" onclick="toggleCcf(this)">CCF-B</span>
+      <span class="ccf-chip" data-v="C" onclick="toggleCcf(this)">CCF-C</span>
+      <span class="ccf-chip" data-v="none" onclick="toggleCcf(this)">非CCF</span>
+      <span class="ccf-chip" data-v="journal" onclick="toggleCcf(this)">期刊</span>
+      <span class="ccf-chip" data-v="conference" onclick="toggleCcf(this)">会议</span>
+      <button class="btn small ghost" id="sch-apply-filter" style="display:none" onclick="applyCcfFilter()">应用筛选</button>
+    </div>
+    <div id="scholar-list"></div>
+  </section>
+
+  <!-- 论文库 -->
+  <section id="view-library" style="display:none">
+    <header class="bar"><h1>论文库</h1>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn ghost" id="lib-tr-btn" onclick="batchTranslatePage()">🌐 翻译当页</button>
+        <button class="btn ghost" id="lib-sm-btn" onclick="batchSummarizePage()">🤖 摘要当页</button>
+        <button class="btn ghost" onclick="batchTranslateAll()">🌐 全部翻译</button>
+        <button class="btn ghost" onclick="batchSummarizeAll()">🤖 全部 AI 摘要</button>
+        <button class="btn" onclick="uploadPapers()">＋ 导入文献（移动）</button>
+        <button class="btn ghost" onclick="newFolder()">📁 新建文件夹</button>
+        <button class="btn ghost" onclick="api('open_folder')()">📂 打开目录</button>
+      </div>
+    </header>
+    <div class="filters">
+      <div class="view-tabs" id="lib-view">
+        <button data-v="grid" onclick="setLibView(this)">平铺</button>
+        <button data-v="list" onclick="setLibView(this)">列表</button>
+        <button data-v="zotero" onclick="setLibView(this)">Zotero</button>
+      </div>
+      <select id="lib-sort" onchange="resetSel('library');renderLib()">
+        <option value="date">按日期</option>
+        <option value="alpha">按首字母</option>
+        <option value="score">按相关度</option>
+      </select>
+      <input id="lib-q" placeholder="🔍 搜索…" style="width:170px" oninput="resetSel('library');libPage=1;renderLib()">
+      <select id="lib-tag" onchange="resetSel('library');libPage=1;renderLib()"><option value="">标签</option></select>
+      <span class="sel-hint" title="单击选中 / Ctrl 加选 / Shift 连选（可反向）/ 双击打开 / 方向键移动 / Enter 打开 / Delete / Esc 取消">点选 · Ctrl 加选 · Shift 连选 · 方向键 · Enter 打开 · Del 移除</span>
+      <span class="sel-info" id="lib-sel-info"></span>
+      <button class="btn red small" id="lib-del-btn" style="display:none" onclick="batchDeleteLib()">🗑 批量删除</button>
+    </div>
+    <div class="filters" id="lib-breadcrumb"></div>
+    <div id="lib-dirs"></div>
+    <div id="lib-body"></div>
+    <div class="pager" id="lib-pager"></div>
+  </section>
+
+  <!-- 下载管理 -->
+  <section id="view-downloads" style="display:none">
+    <header class="bar"><h1>下载管理</h1>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn ghost" onclick="clearDownloadTasks()">🗑 清除已完成</button>
+        <button class="btn ghost" onclick="api('open_folder')()">📂 打开论文库</button>
+      </div>
+    </header>
+    <div id="downloads-list"></div>
+  </section>
+
+  <!-- 收藏 -->
+  <section id="view-starred" style="display:none">
+    <header class="bar"><h1>收藏</h1>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="sel-info" id="star-sel-info"></span>
+        <button class="btn red small" id="star-del-btn" style="display:none" onclick="batchDeleteStar()">🗑 批量取消收藏</button>
+      </div>
+    </header>
+    <div class="filters">
+      <div class="view-tabs" id="star-view">
+        <button data-v="grid" onclick="setStarView(this)">平铺</button>
+        <button data-v="list" onclick="setStarView(this)">列表</button>
+        <button data-v="zotero" onclick="setStarView(this)">Zotero</button>
+      </div>
+      <select id="star-sort" onchange="resetSel('starred');renderStar()">
+        <option value="date">按日期</option>
+        <option value="alpha">按首字母</option>
+        <option value="score">按相关度</option>
+      </select>
+      <span class="sel-hint" style="margin-left:auto" title="单击选中 / Ctrl 加选 / Shift 连选（可反向）/ 双击打开 / 方向键移动 / Enter 打开 / Delete 取消收藏 / Esc 取消">点选 · Ctrl 加选 · Shift 连选 · 方向键 · Enter 打开 · Del 取消收藏</span>
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);cursor:pointer"><input type="checkbox" onchange="toggleAllStar(this)"> 全选</label>
+    </div>
+    <div id="star-body"></div>
+  </section>
+
+  <!-- 垃圾桶 -->
+  <section id="view-trash" style="display:none">
+    <header class="bar"><h1>垃圾桶</h1>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="trash-count" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+    </header>
+    <div class="trash-toolbar">
+      <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="checkbox" id="trash-all" onchange="toggleAllTrash(this.checked)"> 全选</label>
+      <button class="btn small ghost" onclick="invertTrash()">🔄 反选</button>
+      <button class="btn small" id="trash-restore-btn" style="display:none" onclick="restoreTrash()">♻️ 复原</button>
+      <button class="btn small red" id="trash-purge-btn" style="display:none" onclick="purgeTrash()">🗑 永久删除记录</button>
+      <button class="btn small ghost" onclick="loadTrash()">🔄 刷新</button>
+    </div>
+    <div id="trash-list"></div>
+  </section>
+
+  <!-- 设置 -->
+  <section id="view-settings" style="display:none">
+    <header class="bar"><h1>设置</h1><span class="sel-hint" id="settings-saved">更改后自动保存</span></header>
+    <div class="set-group"><h2>🎯 大方向（可多选）</h2><div class="major-chips" id="major-chips"></div></div>
+    <div class="set-group"><h2>🔍 小方向关键词（选中大方向后输入关键词回车）</h2><div id="minor-editors"></div></div>
+    <div class="set-group">
+      <h2>🤖 AI 摘要 / 翻译（OpenAI 兼容，可选；不填则用免费翻译）</h2>
+      <div class="set-row"><label>Base URL</label><input type="text" class="long" id="s-llmurl" placeholder="如 https://api.deepseek.com" onchange="saveSettingsOnly()"></div>
+      <div class="set-row"><label>API Key</label><span style="display:flex;gap:8px;align-items:center"><input type="password" class="long" id="s-llmkey" placeholder="sk-..." onchange="saveSettingsOnly()"><label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" onchange="const k=$('s-llmkey');k.type=this.checked?'text':'password';k.focus()">显示</label></span></div>
+      <div class="set-row"><label>模型名</label><input type="text" id="s-llmmodel" placeholder="如 deepseek-chat" onchange="saveSettingsOnly()"></div>
+    </div>
+    <div class="set-group"><h2>📂 论文库</h2>
+      <div class="set-row"><label>归档根目录</label><span><input type="text" class="long" id="s-libdir" placeholder="默认 ~/.arxiver/library" onchange="saveSettingsOnly()"><button class="btn small ghost" onclick="chooseLibDir()">浏览…</button></span></div>
+    </div>
+    <div class="set-group">
+      <h2>⏰ 定时自动同步</h2>
+      <div class="set-row"><label>每日自动同步时间</label><span><input type="number" id="s-dh" min="0" max="23" onchange="saveSettingsOnly()"> 时 <input type="number" id="s-dm" min="0" max="59" onchange="saveSettingsOnly()"> 分</span></div>
+      <div class="set-row"><label>开启软件后自动同步（失败自动重试）</label><label class="switch"><input type="checkbox" id="s-autosync" onchange="saveSettingsOnly()"><span class="slider"></span></label></div>
+    </div>
+    <div class="set-group">
+      <h2>⚙️ 行为</h2>
+      <div class="set-row"><label>自动下载 Top N 论文</label><span><input type="number" id="s-topn" min="1" max="30" onchange="saveSettingsOnly()"> 篇 <label class="switch"><input type="checkbox" id="s-autodl" onchange="saveSettingsOnly()"><span class="slider"></span></label></span></div>
+      <div class="set-row"><label>推荐池保留天数<br><span style="font-size:11px;color:var(--muted)">超过天数、没被收藏/下载/打标/写笔记的论文自动归档（不删数据，首页切「已归档」可见）</span></label><span><select id="s-keepdays" onchange="saveSettingsOnly()"><option value="0">不自动归档</option><option value="14">14 天</option><option value="30">30 天</option><option value="60">60 天</option><option value="90">90 天</option><option value="180">180 天</option></select> <button class="btn small ghost" onclick="archiveNow()">立即整理一次</button></span></div>
+      <div class="set-row"><label>系统通知推送</label><label class="switch"><input type="checkbox" id="s-notify" onchange="saveSettingsOnly()"><span class="slider"></span></label></div>
+      <div class="set-row"><label>开机自启（后台常驻托盘）</label><label class="switch"><input type="checkbox" id="s-autostart" onchange="saveSettingsOnly()"><span class="slider"></span></label></div>
+      <div class="set-row"><label>桌面快捷方式</label><label class="switch"><input type="checkbox" id="s-shortcut" onchange="saveSettingsOnly()"><span class="slider"></span></label></div>
+      <div class="set-row"><label>进度条透明度</label><span style="display:flex;align-items:center;gap:8px"><input type="range" id="s-popacity" min="20" max="100" step="5" oninput="applyProgressOpacity(this.value)" onchange="applyProgressOpacity(this.value);saveSettingsOnly()"><b id="popacity-val" style="color:var(--text)">100</b>%</span></div>
+    </div>
+    <div class="set-group"><h2>🔑 可选 API</h2>
+      <div class="set-row"><label>Semantic Scholar Key</label><input type="text" class="long" id="s-s2key" onchange="saveSettingsOnly()"></div>
+      <div class="set-row"><label>OpenAlex 邮箱</label><input type="text" class="long" id="s-mailto" onchange="saveSettingsOnly()"></div>
+    </div>
+  </section>
+</main>
+<div class="ctxmenu" id="ctxmenu"></div>
+<div class="progress" id="progress" style="position:fixed;top:12px;left:50%;transform:translateX(-50%);width:56%;z-index:400;margin:0;box-shadow:0 6px 24px rgba(0,0,0,.2)">
+  <div class="prow">
+    <span class="pdrag" onmousedown="startDragProgress(event)" title="拖动进度条">⠿</span>
+    <span id="ptext" style="flex:1"></span>
+    <span id="ppct"></span>
+    <button class="pcancel" id="pcancel" onclick="cancelBatch()" title="中断当前批量翻译/摘要">✕</button>
+  </div>
+  <div class="ptrack"><div class="pbar" id="pbar"></div></div>
+</div>
+<div id="toastbox"></div>
+
+<script>
+const api=(m)=>window.pywebview.api[m];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// 直接把 Error 拼进 toast 会变成「加载失败：Error: xxx …」带一长串堆栈，读不懂也来不及看：取 message、只留一行。
+const errText=e=>{const s=String(e&&e.message?e.message:e||"").split("\n")[0].replace(/^Error:\s*/,"");return s||"未知错误";};
+const parseTags=s=>(s||"").split(",").filter(Boolean);
+function hashColor(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))>>>0;return `hsl(${h%360} 70% 55%)`;}
+const store={_mem:{},get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v;}catch(e){return this._mem[k]!==undefined?this._mem[k]:d;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){this._mem[k]=v;}}};
+
+// ---- 事件回调 ----
+window.Arxiver={
+  onSyncStart(){liveNewIds=new Set();liveRendered=new Set();liveGot=0;bgCount=false;showProgress("开始同步…",0);$("btn-refresh").disabled=true;},
+  onProgress(d){let text=d,pct=null;if(typeof d==="object"&&d.text!==undefined){text=d.text;pct=d.pct;}bgCount=false;if(!text){hideProgress();}else showProgress(text,pct);},
+  onNewPapers(d){
+    if(!d)return;
+    (d.ids||[]).forEach(id=>liveNewIds.add(id));
+    liveGot+=(d.new||0);
+    // 手动同步时后端会推详细进度文案（onProgress），这里不抢它的显示；
+    // 后台定时同步没有进度文案，就借进度条显示实时新增计数。
+    // 注意：进入计数模式后必须**每批都刷新文案**——只在「还没显示」时写的话，
+    // 数字会永远停在第一批（实测第一版就踩了：热榜先回来 32 篇，之后 arXiv 的
+    // 80/25/75/17 全没算进去，界面显示「已新增 32 篇」而库里已有 213 篇）。
+    if(bgCount||!$("progress").classList.contains("show")){
+      bgCount=true;
+      showProgress(`后台同步中… 已新增 ${liveGot} 篇`,null);
+    }
+    scheduleLiveRefresh();
+  },
+  onSyncDone(s){bgCount=false;if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}hideProgress();$("btn-refresh").disabled=false;if(s&&s.papers!==undefined)toast(`同步完成：新增 ${s.new} 篇，共 ${s.papers} 篇候选${s.archived?`，归档 ${s.archived} 篇没人看的旧论文`:""}`);refreshAll();liveGot=0;setTimeout(()=>{liveNewIds=new Set();liveRendered=new Set();},6000);},
+  onSyncError(e){bgCount=false;if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}hideProgress();$("btn-refresh").disabled=false;liveGot=0;toast("同步失败："+errText(e));},
+  onBatchTranslate(d){if(batchCancelled)return;showProgress(`翻译中 ${d.done}/${d.total}…`,Math.round(d.done/d.total*100),true);},
+  onBatchTranslateDone(r){finishBatch("翻译",r);},
+  onBatchSummarize(d){if(batchCancelled)return;showProgress(`摘要中 ${d.done}/${d.total}…`,Math.round(d.done/d.total*100),true);},
+  onBatchSummarizeDone(r){finishBatch("AI 摘要",r);},
+  onToast(m){toast(m);},
+  onMaximized(on){document.body.classList.toggle("maxed",!!on);},
+  onDownloadChange(){loadDownloads();},
+};
+
+// ---- 同步过程中的实时增量刷新 ----
+// 后端每入库一批就推 onNewPapers；这里去抖后只重渲染当前页面，
+// 并保留滚动位置，避免边抓边看时列表跳动。
+let liveNewIds=new Set(),liveRendered=new Set(),liveGot=0,liveTimer=null,bgCount=false,batchCancelled=false,batchKind="";
+function scheduleLiveRefresh(){
+  if(liveTimer)return;
+  liveTimer=setTimeout(()=>{liveTimer=null;applyLiveRefresh();},600);
+}
+function applyLiveRefresh(){
+  refreshStats();
+  if(current!=="home")return;
+  const box=document.querySelector("main");
+  const top=box?box.scrollTop:0;
+  Promise.resolve(loadHome()).then(()=>{if(box)box.scrollTop=top;}).catch(()=>{});
+}
+function showProgress(text,pct,cancellable){const p=$("progress");if(!p)return;p.className="progress show";$("ptext").textContent=text;const x=$("pcancel");if(x)x.style.display=cancellable?"":"none";if(pct!=null){$("pbar").style.width=pct+"%";$("ppct").textContent=pct+"%";}}
+function hideProgress(){const p=$("progress");if(p)p.className="progress";}
+// 「✕ 中断」只对批量翻译/摘要有效（后端只在每个任务开头查一次中断标志）。
+// 同步和下载根本没有中断实现，所以那些进度条上不显示这个按钮，别骗用户。
+function cancelBatch(){
+  if(!batchKind){hideProgress();return;}
+  batchCancelled=true;
+  api("cancel_batch")(batchKind);
+  hideProgress();
+  toast("已请求中断：在途的几篇仍会跑完，还没开始的跳过");
+}
+// 后端收尾推的是 {done,failed,skipped,total,llm}：失败的不能再混进「完成」里报数
+function finishBatch(label,r){
+  const wasCancel=batchCancelled;
+  batchCancelled=false;batchKind="";hideProgress();
+  const ok=(r&&r.done)||0,bad=(r&&r.failed)||0,skip=(r&&r.skipped)||0;
+  let m=`${wasCancel?"已中断，":""}${label}成功 ${ok} 篇`;
+  if(bad)m+=`，失败 ${bad} 篇`;
+  if(bad&&r&&r.llm===false)m+="（未配置 AI 服务，走的是免费翻译源，容易整批失败）";
+  if(skip)m+=`，跳过 ${skip} 篇`;
+  toast(m);
+  Object.keys(openSim).forEach(id=>showSimilar(id));
+  refreshAll();
+}
+function applyProgressOpacity(v){const val=v!=null?parseInt(v):parseInt($("s-popacity").value);const p=$("progress");if(p)p.style.opacity=(val||100)/100;const l=$("popacity-val");if(l)l.textContent=val||100;}
+function startDragProgress(e){e.preventDefault();const p=$("progress");const rect=p.getBoundingClientRect();const ox=e.clientX-rect.left,oy=e.clientY-rect.top;function move(ev){let x=ev.clientX-ox,y=ev.clientY-oy;x=Math.max(0,Math.min(window.innerWidth-rect.width,x));y=Math.max(0,Math.min(window.innerHeight-60,y));p.style.left=x+"px";p.style.top=y+"px";p.style.transform="none";}function up(){document.removeEventListener("mousemove",move);document.removeEventListener("mouseup",up);}document.addEventListener("mousemove",move);document.addEventListener("mouseup",up);}
+function toast(msg){const box=$("toastbox");const d=document.createElement("div");d.className="tmsg";d.textContent=msg;box.appendChild(d);setTimeout(()=>d.remove(),5000);}
+
+// ---- 主题 ----
+let themeManual=false;
+function toggleTheme(){const dark=document.body.classList.toggle("dark");themeManual=true;$("theme-btn").textContent=dark?"☀️ 浅色":"🌙 深色";api("save_settings")({theme:dark?"dark":"light"});}
+function applyTheme(t){const dark=t==="dark";document.body.classList.toggle("dark",dark);$("theme-btn").textContent=dark?"☀️ 浅色":"🌙 深色";}
+
+// ---- 跟随 LifeSystem 主题（只有被内嵌时才有那个同步文件）----
+// 独立运行时以前也每 1.5s 轮询一次：既一直空转 IPC，又会在用户刚手选完
+// 主题的 1.5 秒内把主题抢回去。所以手选过就不再覆盖，读不到就退避到 10s。
+let lifeThemeTimer=null,lifeTicks=0;
+function syncLifeTheme(){
+  if(!apiReady()||themeManual)return;
+  api("get_life_theme")().then(function(t){
+    if(t==="dark"||t==="light"){applyTheme(t);return;}
+    lifeTicks++;
+    if(lifeTicks>=12&&lifeThemeTimer){clearInterval(lifeThemeTimer);lifeThemeTimer=setInterval(syncLifeTheme,10000);}
+  }).catch(function(){});
+}
+lifeThemeTimer=setInterval(syncLifeTheme,1500);
+
+// ---- 侧边栏收起 ----
+function toggleSidebar(){const c=document.body.classList.toggle("side-collapsed");store.set("sidebar",c?"collapsed":"open");const t=$("side-toggle");if(t){t.textContent=c?"›":"‹";t.title=c?"展开侧边栏":"收起侧边栏";}}
+if(store.get("sidebar","open")==="collapsed"){document.body.classList.add("side-collapsed");const t=$("side-toggle");if(t){t.textContent="›";t.title="展开侧边栏";}}
+
+// ---- 导航 ----
+let current="home";
+function switchView(v){document.querySelectorAll("main>section").forEach(s=>s.style.display="none");$("view-"+v).style.display="";document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("active",x.dataset.view===v));current=v;}
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{const v=b.dataset.view;switchView(v);
+  if(v==="library")loadLibrary();if(v==="starred")loadStarred();if(v==="settings")loadSettings();
+  if(v==="scholar")scholarAutoSearch();if(v==="trash")loadTrash();if(v==="downloads")loadDownloads();refreshStats();});
+
+let catNames={};
+function dispCat(c){if(catNames[c])return catNames[c];return c.replace(/^[a-z-]+\./,"");}
+
+// ---- 选择交互（同 Windows 资源管理器）----
+// 鼠标：单击=只选这一个，Ctrl+单击=加选/去选，Shift+单击=从锚点连选（可反向），
+//       双击=打开，右键=菜单，点空白/Esc=取消。
+// 键盘：方向键移动（Shift 连选、Ctrl+Shift 加选）、Home/End 首尾、打字定位、
+//       Ctrl+A 全选、Enter 打开、Delete 移除/删除、F2 重命名（论文库）、
+//       Backspace 返回上级（论文库）。
+const SEL_PAGES={
+  home:{set:()=>homeChecked,order:()=>homeItems.map(p=>p.arxiv_id),sync:syncSelHome,info:"home-sel-info",act:"home-rm-btn",
+        box:"home-list",titles:()=>homeItems.map(p=>p.title||""),open:id=>openWith("default",id),del:()=>batchRemoveHome()},
+  starred:{set:()=>starChecked,order:()=>starItems.map(p=>p.arxiv_id),sync:syncSelStar,info:"star-sel-info",act:"star-del-btn",
+        box:"star-body",titles:()=>starItems.map(p=>p.title||""),open:id=>openWith("default",id),del:()=>batchDeleteStar()},
+  library:{set:()=>libChecked,order:()=>libPageItems.map(f=>f.rel),sync:syncSelLib,info:"lib-sel-info",act:"lib-del-btn",
+        box:"lib-body",titles:()=>libPageItems.map(f=>(f.meta&&f.meta.title)||f.name||""),open:rel=>openWith("default",rel),del:()=>batchDeleteLib()},
+};
+const SEL_CONTAINERS={"home-list":"home","star-body":"starred","lib-body":"library"};
+// 卡片内部这些区域各有自己的行为，点它们不该改变选中状态
+const SEL_IGNORE="button,a,input:not([data-sel-own]),select,textarea,.tag,.card-x,.auth-toggle,.abstoggle,.arxid,.oplink,.actions,.ai-result,.tag-note,.pcancel";
+let selAnchor=null;
+
+function selAttr(page,id){
+  return `data-sel-page="${page}" data-sel-id="${String(id??"").replace(/"/g,"&quot;")}"`;
+}
+function selRowCls(page,id){return SEL_PAGES[page].set().has(id)?' class="sel"':"";}
+// 卡片正文要能拖选复制文字：拖完鼠标抬起会补一个 click，那次 click 不该改掉选中状态
+function textDragged(page,e){
+  if(page==="library")return (e.detail||1)>1;   // 表格/平铺卡没有可拖的正文，双击留给「打开」
+  const g=window.getSelection&&window.getSelection();
+  if(!g||g.isCollapsed||!g.rangeCount)return false;
+  const el=e.target.closest?e.target.closest("[data-sel-page][data-sel-id]"):null;
+  return !!(el&&el.contains(g.anchorNode)&&el.contains(g.focusNode));
+}
+function selClick(page,id,e){
+  const pg=SEL_PAGES[page];if(!pg)return;
+  if(textDragged(page,e))return;
+  const set=pg.set(),order=pg.order(),ctrl=e.ctrlKey||e.metaKey;
+  if(e.shiftKey&&order.includes(id)){
+    if(selAnchor&&order.includes(selAnchor)){
+      const a=order.indexOf(selAnchor),b=order.indexOf(id);
+      if(!ctrl)set.clear();
+      order.slice(Math.min(a,b),Math.max(a,b)+1).forEach(x=>set.add(x));
+    }else set.add(id);
+  }else if(ctrl){
+    if(set.has(id))set.delete(id);else set.add(id);
+    selAnchor=id;
+  }else{set.clear();set.add(id);selAnchor=id;}
+  pg.sync();
+}
+function setAllSel(page,on){const pg=SEL_PAGES[page];pg.set().clear();if(on)pg.order().forEach(x=>pg.set().add(x));selAnchor=null;pg.sync();}
+function clearSel(page){const pg=SEL_PAGES[page];if(!pg||pg.set().size===0)return;pg.set().clear();selAnchor=null;pg.sync();}
+// 换筛选/排序条件等于换了一批条目，旧选中项已不在视野里；不清空会让批量操作打到看不见的论文上
+function resetSel(page){clearSel(page||current);}
+function selBar(page){
+  const pg=SEL_PAGES[page],n=pg.set().size;
+  const info=$(pg.info);if(info)info.textContent=n?`已选 ${n} 项`:"";
+  const b=$(pg.act);if(b)b.style.display=n?"":"none";
+  if(page==="home"||page==="library")batchLabels(page);
+}
+// 有选中时把「翻译当页/摘要当页」改写成「翻译选中 N 篇」，让按钮说明它到底做什么
+function batchLabels(page){
+  const n=(page==="library"?libChecked:homeChecked).size,pre=page==="library"?"lib":"home";
+  const tr=$(pre+"-tr-btn"),sm=$(pre+"-sm-btn");
+  if(tr)tr.textContent=n?`🌐 翻译选中 ${n} 篇`:"🌐 翻译当页";
+  if(sm)sm.textContent=n?`🤖 摘要选中 ${n} 篇`:"🤖 摘要当页";
+}
+function syncSelDom(page){
+  const set=SEL_PAGES[page].set();
+  document.querySelectorAll(`[data-sel-page="${page}"][data-sel-id]`).forEach(el=>{
+    const on=set.has(el.dataset.selId);
+    el.classList.toggle("sel",on);
+    el.querySelectorAll("input[type=checkbox][data-sel-own]").forEach(cb=>cb.checked=on);
+  });
+}
+function syncSelHome(){
+  syncSelDom("home");
+  const all=$("home-all");
+  if(all)all.checked=homeItems.length>0&&homeItems.every(p=>homeChecked.has(p.arxiv_id));
+  selBar("home");
+}
+function syncSelStar(){syncSelDom("starred");selBar("starred");}
+function syncSelLib(){syncSelDom("library");selBar("library");}
+// 键盘走位：把选中落到第 i 项。mode: set 单选 / extend 从锚点连选 / add 加选
+function selIndex(page,i,mode){
+  const pg=SEL_PAGES[page],order=pg.order();
+  if(!order.length)return;
+  i=Math.max(0,Math.min(order.length-1,i));
+  const set=pg.set(),id=order[i];
+  if(mode==="add"){
+    // Ctrl+Shift+方向键只加不减（Ctrl+单击才是来回切换）
+    set.add(id);selAnchor=id;
+  }else if(mode==="extend"&&selAnchor&&order.includes(selAnchor)){
+    const a=order.indexOf(selAnchor),b=i;
+    set.clear();
+    order.slice(Math.min(a,b),Math.max(a,b)+1).forEach(x=>set.add(x));
+  }else{set.clear();set.add(id);selAnchor=id;}
+  pg.sync();
+  revealSel(page,id);
+}
+// 键盘选到屏幕外是看不见的，必须跟着滚进视野
+function revealSel(page,id){
+  const box=$(SEL_PAGES[page].box);
+  if(!box||!box.querySelector)return;
+  const el=box.querySelector(`[data-sel-page="${page}"][data-sel-id="${String(id).replace(/"/g,'\\"')}"]`);
+  if(el&&el.scrollIntoView)el.scrollIntoView({block:"nearest"});
+}
+function anchorIndex(page){
+  const order=SEL_PAGES[page].order();
+  if(selAnchor&&order.includes(selAnchor))return order.indexOf(selAnchor);
+  const first=SEL_PAGES[page].set().values().next().value;
+  return first===undefined?-1:order.indexOf(first);
+}
+// 平铺视图一行有好几列，↓ 得往下挪「一行」而不是往下挪一个
+function navCols(){
+  if(current!=="library"||libView!=="grid")return 1;
+  const g=document.querySelectorAll("#lib-body .gcard");
+  if(g.length<2)return 1;
+  const top=g[0].offsetTop;let n=0;
+  for(const el of g){if(el.offsetTop===top)n++;else break;}
+  return Math.max(1,n);
+}
+function bindSel(){
+  Object.keys(SEL_CONTAINERS).forEach(id=>{
+    const el=$(id),page=SEL_CONTAINERS[id];
+    if(!el)return;
+    el.addEventListener("mousedown",e=>{
+      if(e.button!==0)return;
+      if(e.target.closest&&e.target.closest(SEL_IGNORE))return;
+      if(!(e.target.closest&&e.target.closest("[data-sel-page][data-sel-id]")))clearSel(page);
+    });
+    el.addEventListener("click",e=>{
+      if(e.button!==0)return;
+      const row=e.target.closest&&e.target.closest("[data-sel-page][data-sel-id]");
+      if(!row||row.dataset.selPage!==page)return;
+      if(e.target.closest&&e.target.closest(SEL_IGNORE))return;
+      selClick(page,row.dataset.selId,e);
+    });
+  });
+  document.addEventListener("keydown",e=>{
+    if(!(current in SEL_PAGES))return;
+    const t=e.target,tag=(t&&t.tagName)||"";
+    if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(t&&t.isContentEditable))return;
+    // 焦点还停在按钮上时（刚点过「收藏」），Enter/空格归那个按钮
+    if(tag==="BUTTON"&&(e.key==="Enter"||e.key===" "))return;
+    const pg=SEL_PAGES[current],order=pg.order(),i=anchorIndex(current);
+    const mode=e.shiftKey?(e.ctrlKey?"add":"extend"):"set";
+    if(e.key==="Escape"){clearSel(current);return;}
+    if((e.ctrlKey||e.metaKey)&&(e.key==="a"||e.key==="A")){e.preventDefault();setAllSel(current,true);return;}
+    // Ctrl/Alt 组合键让给浏览器和其它功能，但 Ctrl+Shift+方向键是「连选加一个」
+    const arrow=/^Arrow(Up|Down|Left|Right)$/.test(e.key);
+    if(!arrow&&(e.ctrlKey||e.metaKey||e.altKey))return;
+    if(e.key==="Enter"){if(i>=0){e.preventDefault();pg.open(order[i]);}return;}
+    if(e.key==="Delete"){if(pg.set().size){e.preventDefault();pg.del();}return;}
+    if(e.key==="F2"){if(current==="library"&&i>=0){e.preventDefault();renameLib(order[i]);}return;}
+    if(e.key==="Backspace"){if(current==="library"){e.preventDefault();gotoLib(libData.parent||"");}return;}
+    if(e.key==="Home"){if(order.length){e.preventDefault();selIndex(current,0,mode);}return;}
+    if(e.key==="End"){if(order.length){e.preventDefault();selIndex(current,order.length-1,mode);}return;}
+    let step=0;
+    if(e.key==="ArrowDown")step=navCols();
+    else if(e.key==="ArrowRight")step=1;
+    else if(e.key==="ArrowUp")step=-navCols();
+    else if(e.key==="ArrowLeft")step=-1;
+    if(step){
+      if(!order.length)return;
+      e.preventDefault();
+      selIndex(current,i<0?(step>0?0:order.length-1):i+step,mode);
+      return;
+    }
+    // 资源管理器的「打字定位」：直接敲字母/汉字就跳到以它开头的条目
+    if(e.key.length===1){
+      const ts=pg.titles(),ch=e.key.toLowerCase();
+      for(let k=0;k<ts.length;k++){
+        const idx=((i>=0?i+1:0)+k)%ts.length;
+        if(String(ts[idx]||"").toLowerCase().startsWith(ch)){e.preventDefault();selIndex(current,idx,"set");return;}
+      }
+    }
+  });
+}
+bindSel();
+
+// ---- 前沿探索 ----
+let homePage=1,homePageSize=10,homeRange="all",homeScope="",homeItems=[],homeChecked=new Set();
+const RANGE_DAYS={all:0,"1":1,"3":3,"7":7,"30":30,"365":365};
+function setScope(el){document.querySelectorAll("#home-scope button").forEach(b=>b.classList.remove("on"));el.classList.add("on");resetSel("home");homeScope=el.dataset.s;homePage=1;loadHome();}
+function setRange(el){document.querySelectorAll("#home-range button").forEach(b=>b.classList.remove("on"));el.classList.add("on");resetSel("home");homeRange=el.dataset.r;homePage=1;loadHome();const d=RANGE_DAYS[homeRange]||0;if(d>0){api("sync_range")(d).then(r=>{if(r&&r.error)toast(r.error);});}}
+function clearHomeFilter(){resetSel("home");$("home-min-score").value="";$("home-date-from").value="";$("home-date-to").value="";homePage=1;loadHome();}
+let homeSeq=0;
+async function loadHome(){
+  // 一次同步期间会被反复刷新（每批入库都会去抖重渲染），两个 await 中间
+  // 完全可能又有新的筛选/刷新发生，响应乱序就会渲染出旧页 → 用序号弃旧。
+  const my=++homeSeq;
+  try{
+  const tag=$("home-tag").value,order=$("home-order").value,sinceDays=RANGE_DAYS[homeRange]||0;
+  const minScore=parseInt($("home-min-score").value)||0;
+  const dateFrom=$("home-date-from").value,dateTo=$("home-date-to").value;
+  // 总数 + 只取这一页：以前是 get_papers(limit=100000) 把整库捞回前端再切片，
+  // 库里一千多篇时每次刷新要搬 ~3MB JSON，同步期间每 600ms 就来一次。
+  const total=await api("count_papers")(homeScope,"",tag,sinceDays,minScore,dateFrom,dateTo)||0;
+  if(my!==homeSeq)return;
+  const tp=Math.max(1,Math.ceil(total/homePageSize));if(homePage>tp)homePage=tp;
+  const pageItems=await api("get_papers")(homeScope,homePageSize,(homePage-1)*homePageSize,"",order,tag,sinceDays,minScore,dateFrom,dateTo)||[];
+  if(my!==homeSeq)return;
+  homeItems=pageItems;
+  $("st-filtered").textContent=total;
+  $("st-filtered-label").textContent=homeScope?"已归档条数":"当前筛选";
+  $("home-list").innerHTML=pageItems.length?pageItems.map(p=>{
+    // 本轮同步新入库的：闪烁动画只放一次（避免每次刷新重复闪），
+    // 但「刚抓取」标记在整个同步期间都保留，刷新多少次都能一眼看出哪些是新的
+    const isNew=liveNewIds.has(p.arxiv_id);
+    const flash=isNew&&!liveRendered.has(p.arxiv_id);
+    if(flash)liveRendered.add(p.arxiv_id);
+    return pCard(p,flash,isNew);
+  }).join(""):(homeScope?'<div class="empty">还没有归档的论文<br><span style="font-size:12px">太久没被收藏/下载/标注的论文会自动收到这里（保留天数在设置里改）</span></div>'
+                       :'<div class="empty">暂无论文，点右上角「立即同步」抓取</div>');
+  renderPager("home-pager",total,tp,"homeGo");
+  syncSelHome();
+}catch(e){if(my===homeSeq)toast("加载失败："+errText(e));}}
+function homeGo(p){homePage=p;loadHome();}
+function toggleAllHome(cb){setAllSel("home",cb.checked);}
+async function batchRemoveHome(){if(!homeChecked.size)return;if(!confirm(`确定将选中的 ${homeChecked.size} 篇移入垃圾桶？`))return;try{await Promise.all([...homeChecked].map(id=>api("set_status")(id,"trash")));toast(`已移除 ${homeChecked.size} 篇`);clearSel("home");loadHome();refreshStats();}catch(e){toast("移除失败："+errText(e));}}
+
+function hexRgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function scoreColor(s){
+  if(!s||s<=0)return "#94a3b8";
+  const stops=[[1,"#818cf8"],[30,"#6366f1"],[45,"#f59e0b"],[60,"#ef4444"]];
+  if(s>=stops[stops.length-1][0])return stops[stops.length-1][1];
+  let i=0;
+  while(i<stops.length-2&&s>stops[i+1][0])i++;
+  const s0=stops[i][0],s1=stops[i+1][0];
+  const t=(s-s0)/(s1-s0);
+  const c0=hexRgb(stops[i][1]),c1=hexRgb(stops[i+1][1]);
+  return `rgb(${Math.round(c0[0]+(c1[0]-c0[0])*t)},${Math.round(c0[1]+(c1[1]-c0[1])*t)},${Math.round(c0[2]+(c1[2]-c0[2])*t)})`;
+}
+function copyText(t){api("copy_to_clipboard")(t).then(ok=>toast(ok?"已复制":"复制失败"));}
+
+// 作者列表：超过 MAX_AUTHORS 位时折叠为一行，点击展开/收起
+const MAX_AUTHORS=8;
+function authorMeta(authors){
+  if(!authors)return "";
+  const list=String(authors).split(",").map(s=>s.trim()).filter(Boolean);
+  if(list.length<=MAX_AUTHORS)return `<div class="meta">${esc(list.join(", "))}</div>`;
+  const short=list.slice(0,MAX_AUTHORS).join(", ");
+  const full=list.join(", ");
+  return `<div class="meta">
+    <span class="authors-short">${esc(short)}</span>
+    <span class="authors-full" style="display:none">${esc(full)}</span>
+    <span class="auth-toggle" onclick="toggleAuthors(this,${list.length})">等 ${list.length} 位作者 ▾</span>
+  </div>`;
+}
+function toggleAuthors(el,cnt){
+  const m=el.parentNode;
+  const s=m.querySelector(".authors-short"),f=m.querySelector(".authors-full");
+  const collapsed=s.style.display!=="none";
+  s.style.display=collapsed?"none":"";
+  f.style.display=collapsed?"":"none";
+  el.textContent=collapsed?"收起 ▴":`等 ${cnt} 位作者 ▾`;
+}
+
+function pCard(p,fresh,isNew){
+  const isLocal=!!(p.arxiv_id&&p.arxiv_id.startsWith("local:"));
+  const selPage=(current==="home"||current==="starred")?current:"";  // 相似论文弹窗复用此卡，不参与选择
+  const isSel=selPage?SEL_PAGES[selPage].set().has(p.arxiv_id):false;
+  const selAttrs=selPage?selAttr(selPage,p.arxiv_id):"";
+  const cats=(p.categories||"").split(",").filter(Boolean).map(c=>`<span class="chip">${esc(dispCat(c))}</span>`).join("");
+  const src=p.source==="hf_daily"?"🔥 热榜":(p.source==="local"?"📁 本地":"📄 arXiv");
+  const tags=parseTags(p.tags).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}" onclick="filterTag('${esc(t)}')">${esc(t)}</span>`).join("");
+  const starBtn=p.status==="starred"?`<button class="btn small amber" onclick="setStatus('${p.arxiv_id}','new')">★ 收藏</button>`:`<button class="btn small ghost" onclick="setStatus('${p.arxiv_id}','starred')">☆ 收藏</button>`;
+  const dlBtn=p.local_path?`<button class="btn small green" onclick="api('open_pdf')('${p.arxiv_id}')">📖 PDF</button>`:(!isLocal?`<button class="btn small" onclick="dl('${p.arxiv_id}',this)">⬇️ 下载</button>`:"");
+  const absLong=(p.abstract||"").length>300||(p.abstract_zh||"").length>220;
+  return `<div class="card${fresh?" fresh":""}${isSel?" sel":""}" id="card-${p.arxiv_id}" ${selAttrs} data-local="${p.local_path?1:0}" data-arx="${isLocal?0:1}" data-st="${esc(p.status||"")}" ondblclick="openWith('default','${p.arxiv_id}')" oncontextmenu="cardMore(event,'${p.arxiv_id}')">
+    ${!isLocal?`<button class="card-x" title="移入垃圾桶" onclick="trashArxiv('${p.arxiv_id}')">✕</button>`:""}
+    <div class="trow">${selPage?`<input type="checkbox" class="hchk" data-sel-own ${isSel?"checked":""}>`:""}<span class="pdate">${esc(p.published||"")}</span><h3>${esc(p.title)}</h3>${p.score?`<span class="score" style="color:${scoreColor(p.score)}">${p.score}分</span>`:""}${!isLocal?`<span class="arxid" title="点击复制 arXiv ID" onclick="copyText('${esc(p.arxiv_id)}')">arXiv:${esc(p.arxiv_id)}</span>`:""}</div>
+    ${p.title_zh?`<div class="zhtitle">${esc(p.title_zh)}</div>`:""}
+    <div class="chips">${cats}<span class="badge ${isLocal?"local":"src"}">${src}</span>${p.upvotes?`<span class="badge">👍 ${p.upvotes}</span>`:""}${p.citations?`<span class="badge">被引 ${p.citations}</span>`:""}${p.status==="archived"?`<span class="badge" style="background:var(--chip);color:var(--chiptext)">已归档</span>`:""}${isNew?`<span class="badge" style="background:var(--accent);color:#fff">刚抓取</span>`:""}</div>
+    ${p.abstract?`<div class="abstext">${esc(p.abstract)}</div>`:""}
+    ${p.abstract_zh?`<div class="abszh">${esc(p.abstract_zh)}</div>`:""}
+    ${absLong?`<span class="abstoggle" onclick="toggleAbs(this,'${p.arxiv_id}')">展开全文 ▾</span>`:""}
+    ${authorMeta(p.authors)}
+    ${tags?`<div class="chips">${tags}</div>`:""}
+    <div class="actions">
+      ${starBtn}${dlBtn}
+      <button class="btn small ghost" onclick="toggleTagNote('${p.arxiv_id}')">🏷️ 标签笔记</button>
+      <button class="btn small ghost" onclick="cardMore(event,'${p.arxiv_id}')">⋯ 更多</button>
+    </div>
+    <div class="ai-result" id="ai-${p.arxiv_id}"></div>
+    <div class="tag-note" id="tn-${p.arxiv_id}" style="display:none"></div>
+  </div>`;
+}
+// 摘要默认截断 3 行，点这里展开/收起（控件本身不触发卡片选中）
+function toggleAbs(el,id){
+  const card=$("card-"+id);if(!card)return;
+  const on=card.classList.toggle("abs-open");
+  card.querySelectorAll(".abstext,.abszh").forEach(b=>b.classList.toggle("open",on));
+  el.textContent=on?"收起 ▴":"展开全文 ▾";
+}
+// 卡片右键 / 「⋯ 更多」菜单：把不常用的操作收起来，卡片底部只留 4 个主操作。
+// 和资源管理器一样：右键一个没选中的条目时，先把它单独选中。
+function cardMore(e,id){
+  const card=e.target.closest(".card");if(!card)return;
+  e.preventDefault();
+  const page=card.dataset.selPage;
+  if(page&&page===current&&!SEL_PAGES[page].set().has(id))selClick(page,id,e);
+  const hasPdf=card.dataset.local==="1",isArx=card.dataset.arx==="1";
+  const starred=card.querySelector(".actions .amber");
+  const opens=hasPdf?[{app:"wps",label:"WPS",target:id},{app:"chrome",label:"浏览器",target:id},{app:"xlj",label:"小绿鲸",target:id}]:[];
+  const items=[];
+  if(card.dataset.st==="archived")items.push({t:"↩ 放回推荐池",f:()=>setStatus(id,"new")});
+  if(isArx){items.push({t:"🔗 在 arXiv 页面打开",f:()=>api("open_abs")(id)});items.push({t:"🌐 翻译标题摘要",f:()=>translateOne(id)});items.push({t:"🤖 生成 AI 摘要",f:()=>summaryOne(id)});items.push({t:"🔎 相似论文",f:()=>showSimilar(id)});}
+  items.push({t:"📋 复制 BibTeX",f:()=>bibtexCopy(id)});
+  items.push(starred?{t:"☆ 取消收藏",f:()=>setStatus(id,"new")}:{t:"★ 收藏",f:()=>setStatus(id,"starred")});
+  if(isArx)items.push({t:"🗑 移入垃圾桶",danger:true,f:()=>trashArxiv(id)});
+  let x=e.clientX,y=e.clientY;
+  if(!x&&!y){const r=e.target.getBoundingClientRect();x=r.left;y=r.bottom+4;}
+  showCtx(x,y,opens,items);
+}
+let allTagNames=[];
+async function toggleTagNote(id){
+  const tn=$("tn-"+id);
+  if(!tn)return;
+  if(tn.style.display!=="none"){tn.style.display="none";return;}
+  if(tn.dataset.loaded){tn.style.display="block";return;}
+  tn.dataset.loaded="1";
+  tn.innerHTML='<div class="aiout"><span class="spin"></span> 加载中…</div>';
+  tn.style.display="block";
+  const p=await api("get_paper")(id);
+  try{allTagNames=(await api("get_all_tags")()).map(t=>t.name);}catch(e){allTagNames=[];}
+  const tags=parseTags(p.tags);
+  const quickTags=allTagNames.filter(t=>!tags.includes(t)).slice(0,12).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)};cursor:pointer" onclick="quickAddTag('${esc(id)}','${esc(t)}')">${esc(t)} ＋</span>`).join("");
+  tn.innerHTML=`
+    <div><h4 style="font-size:12px;color:var(--muted);margin-bottom:6px">标签</h4>
+      <div class="chips">${tags.map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}">${esc(t)} <b style="cursor:pointer" onclick="delTag('${esc(id)}','${esc(t)}')">×</b></span>`).join("")}
+        <input type="text" placeholder="+ 标签回车" style="padding:5px 9px;border:1px solid var(--border);border-radius:20px;font-size:12px;width:110px;background:var(--input);color:var(--text)" onkeydown="addTag(event,'${esc(id)}')">
+      </div>
+      ${quickTags?`<div class="chips" style="margin-top:6px">${quickTags}</div>`:""}
+    </div>
+    <div style="margin-top:12px"><h4 style="font-size:12px;color:var(--muted);margin-bottom:6px">笔记</h4>
+      <textarea id="note-${id}" placeholder="记录想法…">${esc(p.note||"")}</textarea>
+      <div style="text-align:right;margin-top:6px"><button class="btn small" onclick="saveNote('${id}')">💾 保存笔记</button></div>
+    </div>`;
+}
+let openSim={};
+// 后端对「没有要处理的」直接返回 started:false 且不推任何进度，
+// 所以这里必须自己收掉进度条，否则它会永远挂着（曾经就是这样的）。
+function startBatch(m,ids,preparing,emptyMsg){
+  batchCancelled=false;
+  batchKind=m==="batch_translate"?"translate":"summarize";
+  showProgress(preparing,1,true);
+  api(m)(ids).then(r=>{if(r&&r.started===false){batchKind="";batchCancelled=false;hideProgress();toast(r.msg||emptyMsg);}})
+    .catch(e=>{batchKind="";hideProgress();toast("启动失败："+errText(e));});
+}
+// 单张卡片只翻/只摘要这一篇：以前会先去 Semantic Scholar 捞相似论文再一起处理，
+// 点一下要干等几十秒进度条才动，还顺带多翻了 8 篇（限速时更是整批卡住）。
+function translateOne(id){startBatch("batch_translate",[id],"正在翻译这篇…","这篇已翻译过了");}
+function summaryOne(id){startBatch("batch_summarize",[id],"正在生成这篇的 AI 摘要…","这篇已有摘要");}
+function showSimilar(id){openSim[id]=true;$("ai-"+id).innerHTML='<div class="aiout"><span class="spin"></span> 检索中…</div>';api("similar")(id,8).then(r=>{const v=(r||[]).filter(s=>s.arxiv_id);$("ai-"+id).innerHTML=v.length?`<h4 style="font-size:12px;color:var(--muted);margin-bottom:4px">相似论文</h4>`+v.map(s=>`<div class="sim-card" onclick="api('open_abs')('${s.arxiv_id}')"><span class="badge src" style="font-size:10px;padding:1px 7px">相关</span><div class="sim-title">${esc(s.title)}</div>${s.title_zh?`<div style="color:var(--accent);font-size:12px;margin-top:2px">${esc(s.title_zh)}</div>`:""}<div class="meta" style="margin-top:4px">${esc(s.authors||"")}${s.published?" · "+esc(s.published):""}</div>${s.abstract?`<div class="sim-abs">${esc(s.abstract)}</div>`:""}${s.abstract_zh?`<div class="sim-abs" style="color:var(--accent)">${esc(s.abstract_zh)}</div>`:""}</div>`).join(""):"<div class='aiout'>暂无相似论文</div>";}).catch(e=>{$("ai-"+id).innerHTML="";toast("失败："+errText(e));});}
+
+async function setStatus(id,st){try{await api("set_status")(id,st);refreshAll();}catch(e){toast("操作失败："+errText(e));}}
+async function dl(id,btn){btn.disabled=true;btn.textContent="下载中…";try{const tid=await api("download")(id);if(tid){toast("已加入下载队列，可在「下载」tab 查看进度");}else{toast("下载失败");btn.textContent="⬇️ 重试";btn.disabled=false;}}catch(e){toast("下载出错："+errText(e));btn.textContent="⬇️ 重试";btn.disabled=false;}}
+async function addTag(e,id){if(e.key!=="Enter")return;const v=e.target.value.trim();if(!v)return;const p=await api("get_paper")(id);const tags=parseTags(p.tags);if(!tags.includes(v))tags.push(v);await api("set_tags")(id,tags);if(!allTagNames.includes(v))allTagNames.push(v);loadTags();reloadTagNote(id);}
+async function quickAddTag(id,t){const p=await api("get_paper")(id);const tags=parseTags(p.tags);if(!tags.includes(t))tags.push(t);await api("set_tags")(id,tags);loadTags();reloadTagNote(id);}
+async function delTag(id,t){const p=await api("get_paper")(id);const tags=parseTags(p.tags).filter(x=>x!==t);await api("set_tags")(id,tags);loadTags();reloadTagNote(id);}
+function reloadTagNote(id){const tn=$("tn-"+id);if(tn){tn.dataset.loaded="";tn.style.display="none";toggleTagNote(id);}}
+async function saveNote(id){const n=$("note-"+id).value;await api("set_note")(id,n);toast("笔记已保存");}
+function filterTag(t){resetSel("home");switchView("home");$("home-tag").value=t;homePage=1;loadHome();}
+
+// ---- 谷歌学术（期刊/会议论文，CCF 标注） ----
+let schPage=0,schQuery="";
+function _ccfFilterActive(){
+  const c=[];
+  if(ccfFilter.A)c.push("A");if(ccfFilter.B)c.push("B");if(ccfFilter.C)c.push("C");
+  if(ccfFilter.none)c.push("none");
+  return c.length?c:null;
+}
+function _typeFilterActive(){
+  const t=[];
+  if(ccfFilter.journal)t.push("journal");if(ccfFilter.conference)t.push("conference");
+  return t.length?t:null;
+}
+async function scholarSearch(){
+  const q=$("sch-q").value.trim();
+  if(!q){toast("请输入搜索关键词");return;}
+  schQuery=q;schPage=0;$("sch-cached-hint")&&$("sch-cached-hint").remove();
+  const y=parseInt($("sch-year").value)||0;
+  const ccf=_ccfFilterActive(),tfilter=_typeFilterActive();
+  $("scholar-list").innerHTML='<div class="empty"><span class="spin"></span> 正在搜索期刊/会议论文…</div>';
+  $("sch-next").style.display="none";
+  try{
+    const list=await api("scholar_search")(q,20,y,0,ccf,tfilter);
+    renderScholar(list,false);
+    saveScholarCache();
+    saveScholarState();
+  }catch(e){$("scholar-list").innerHTML='<div class="empty">搜索失败：'+esc(errText(e))+'</div>';}
+}
+async function scholarNext(){
+  if(!schQuery)return;
+  schPage++;
+  const y=parseInt($("sch-year").value)||0;
+  const ccf=_ccfFilterActive(),tfilter=_typeFilterActive();
+  try{
+    const list=await api("scholar_search")(schQuery,20,y,schPage,ccf,tfilter);
+    if(!list.length){toast("没有更多结果");schPage--;return;}
+    renderScholar(list,true);
+    saveScholarCache();
+    saveScholarState();
+  }catch(e){toast("搜索失败："+errText(e));}
+}
+// 结果缓存到数据目录（~/.arxiver/scholar_cache.json）：localStorage 在
+// pywebview 里不保证跨启动存活，以前每次点开谷歌学术都要重新抓一遍。
+function saveScholarCache(){
+  api("save_scholar_cache")({query:schQuery,year:$("sch-year").value||"",
+    ccf:_ccfFilterActive()||[],types:_typeFilterActive()||[],items:schResults})
+    .catch(()=>{});
+}
+function applyCcfFromLists(ccf,types){
+  ["A","B","C","none","journal","conference"].forEach(v=>{
+    ccfFilter[v]=(ccf||[]).includes(v)||(types||[]).includes(v);});
+  document.querySelectorAll("#sch-ccf-filter .ccf-chip").forEach(el=>
+    el.classList.toggle("on",!!ccfFilter[datasetOf(el,"v")]));
+  $("sch-apply-filter").style.display=Object.values(ccfFilter).some(Boolean)?"":"none";
+}
+function ccfBadge(rank){
+  if(!rank)return "";
+  const colors={A:"#ef4444",B:"#f59e0b",C:"#6366f1"};
+  return `<span class="badge" style="background:${colors[rank]}22;color:${colors[rank]};font-weight:700">CCF-${rank}</span>`;
+}
+let schResults=[];
+function scholarCard(p){
+  const authors=(p.authors||[]).slice(0,4).join(", ")+((p.authors||[]).length>4?" 等":"");
+  const doi=p.doi||"";
+  return `<div class="card" data-doi="${esc(doi)}">
+    ${doi?`<button class="card-x" title="移入垃圾桶" data-trash-doi="${esc(doi)}" onclick="trashSchByDoi(this.getAttribute('data-trash-doi'))">✕</button>`:""}
+    <div class="trow"><h3>${esc(p.title)}</h3></div>
+    <div class="chips">${ccfBadge(p.ccf)}${p.venue?`<span class="badge src">${esc(p.venue)}</span>`:""}${p.year?`<span class="badge">${esc(p.year)}</span>`:""}${p.citations?`<span class="badge">被引 ${p.citations}</span>`:""}</div>
+    ${authors?`<div class="meta">${esc(authors)}</div>`:""}
+    <div class="actions">
+      ${p.url?`<button class="btn small ghost" onclick="api('open_url')('${esc(p.url)}')">🔗 DOI 页面</button>`:""}
+      <button class="btn small ghost" onclick="copyText('${esc(p.title)}')">📋 复制标题</button>
+    </div>
+  </div>`;
+}
+function renderScholar(list,append){
+  const box=$("scholar-list");
+  if(!append){
+    schResults=list;
+    box.innerHTML=list.length?list.map(scholarCard).join(""):'<div class="empty">没有找到相关期刊/会议论文，换个关键词试试</div>';
+    $("sch-next").style.display=list.length?"":"none";
+  }else{
+    schResults=schResults.concat(list);
+    box.insertAdjacentHTML("beforeend",list.map(scholarCard).join(""));
+  }
+}
+function trashSchByDoi(doi){
+  const p=schResults.find(r=>r.doi===doi);
+  if(p)trashScholar(p);
+  else toast("未找到该论文数据");
+}
+let schAutoDone=false;
+async function scholarAutoSearch(){
+  if(schAutoDone)return;
+  schAutoDone=true;
+  // 先看数据目录里有没有上次的结果：有就直接摊开，不必每次点开都重搜
+  try{
+    const c=await api("get_scholar_cache")();
+    if(c&&c.query&&(c.items||[]).length){
+      schQuery=c.query;schPage=0;
+      $("sch-q").value=c.query;
+      if(c.year)$("sch-year").value=c.year;
+      applyCcfFromLists(c.ccf,c.types);
+      renderScholar(c.items,false);
+      const mins=Math.max(0,Math.round((Date.now()/1000-(c.saved_at||0))/60));
+      $("scholar-list").insertAdjacentHTML("afterbegin",
+        `<div id="sch-cached-hint" style="font-size:12px;color:var(--muted);margin-bottom:10px">`
+        +`上次搜索「${esc(c.query)}」的结果（${mins>=60?Math.round(mins/60)+" 小时前":mins+" 分钟前"}存的），点「🔍 搜索」重新抓取</div>`);
+      return;
+    }
+  }catch(e){}
+  // 其次恢复上次输入的关键词/筛选（没有结果缓存时至少不用重敲）
+  const restored=restoreScholarState();
+  if(restored){scholarSearch();return;}
+  // 首次使用：根据 Profile 自动搜索
+  try{
+    const prof=await api("get_profile")();
+    const majors=(prof.majors||[]).slice(0,4);
+    const kwMap={agent:"AI agent",recsys:"recommender system",intent:"intent understanding",multimodal:"multimodal learning",compression:"model compression"};
+    const q=majors.map(m=>kwMap[m]||"").find(Boolean);
+    if(!q){
+      // 自动推荐只认 5 个关键词，配了别的大方向就会看到一片空白——
+      // 至少告诉他为什么空、下一步该干什么。
+      $("scholar-list").innerHTML=`<div class="empty">还不能按你的方向自动推荐。<br>
+        <span style="font-size:12px">上方直接输入英文关键词搜索，或在「设置」里选 agent / 推荐 / 多模态 / 压缩 / 意图识别 相关的大方向。</span></div>`;
+      return;
+    }
+    $("sch-q").value=q;
+    scholarSearch();
+  }catch(e){}
+}
+
+// ---- 论文库 ----
+let libCwd="",libData={dirs:[],files:[]},libPage=1,libPageSize=10,libView=store.get("libview","list"),libChecked=new Set(),libPageItems=[];
+function jsq(s){return String(s??"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");}
+async function loadLibrary(){try{libData=await api("browse_library")(libCwd);libPage=1;renderLib();}catch(e){toast("浏览失败："+errText(e));}}
+function setLibView(el){document.querySelectorAll("#lib-view button").forEach(b=>b.classList.remove("on"));el.classList.add("on");libView=el.dataset.v;store.set("libview",libView);renderLib();}
+function renderLibBreadcrumb(){let c='<span class="crumb" onclick="gotoLib(\'\')">📚 论文库</span>';if(libData.current){const parts=libData.current.split("/");let acc="";parts.forEach(p=>{acc=acc?acc+"/"+p:p;c+=`<span style="color:var(--muted)"> / </span><span class="crumb" onclick="gotoLib('${jsq(acc)}')">${esc(p)}</span>`;});}$("lib-breadcrumb").innerHTML=c;}
+function gotoLib(rel){libCwd=rel;libChecked.clear();loadLibrary();}
+function libSortFiles(files){const mode=$("lib-sort").value;return [...files].sort((a,b)=>{if(mode==="alpha")return (a.name||"").localeCompare(b.name||"");if(mode==="date")return String((b.meta||{}).published||b.mtime).localeCompare(String((a.meta||{}).published||a.mtime));return ((b.meta||{}).score||0)-((a.meta||{}).score||0);});}
+function libFiltered(){const q=($("lib-q").value||"").toLowerCase(),tag=$("lib-tag").value;return (libData.files||[]).filter(f=>{const m=f.meta||{};if(q&&!(f.name.toLowerCase().includes(q)||String(m.title||"").toLowerCase().includes(q)))return false;if(tag&&!parseTags(m.tags).includes(tag))return false;return true;});}
+function renderLib(){renderLibBreadcrumb();renderLibDirs();
+  const items=libSortFiles(libFiltered());
+  const tp=Math.max(1,Math.ceil(items.length/libPageSize));if(libPage>tp)libPage=tp;
+  const pageItems=items.slice((libPage-1)*libPageSize,libPage*libPageSize);
+  libPageItems=pageItems;
+  const body=$("lib-body");
+  // 空目录以前只有一行光秃秃的表头，看不出是「没文件」还是「没加载出来」
+  const emptyMsg=!pageItems.length&&!(libData.dirs||[]).length
+    ?(($("lib-q").value||"").trim()
+      ?`没有匹配「${esc(($("lib-q").value||"").trim())}」的 PDF`
+      :`这个文件夹还没有 PDF<br><span style="font-size:12px">归档目录：${esc(libData.base||"")}，可点上方「＋ 导入文献」把本地 PDF 移进来</span>`)
+    :"";
+  if(emptyMsg){body.innerHTML=`<div class="empty">${emptyMsg}</div>`;}
+  else if(libView==="grid"){body.innerHTML=`<div class="gridwrap">${pageItems.map(libGridCard).join("")}</div>`;}
+  else if(libView==="list"){body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllLib(this)"></th><th>标题</th><th>备注</th><th>分类</th><th>时间</th><th>重要度</th><th>操作</th></tr></thead><tbody>${pageItems.map(libListRow).join("")}</tbody></table></div>`;}
+  else{body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllLib(this)"></th><th>标题</th><th>译文标题</th><th>条目</th><th>附件</th><th>标签</th><th>操作</th></tr></thead><tbody>${pageItems.map(libZoteroRow).join("")}</tbody></table></div>`;}
+  syncSelLib();
+  renderPager("lib-pager",items.length,tp,"libGo");}
+function renderLibDirs(){$("lib-dirs").innerHTML=(libData.dirs||[]).map(x=>`<div class="folder" onclick="gotoLib('${jsq(x.rel)}')">📁 ${esc(x.name)}</div>`).join("");}
+function libGridCard(f){const m=f.meta||{};const title=m.title||f.name.replace(/\.pdf$/i,"");const cats=(m.categories||"").split(",").filter(Boolean);const on=libChecked.has(f.rel);return `<div class="gcard${on?" sel":""}" ${selAttr("library",f.rel)} ondblclick="openWith('default','${jsq(f.rel)}')" oncontextmenu="libCtx(event,'${jsq(f.rel)}')">
+  <input type="checkbox" class="gchk" data-sel-own ${on?"checked":""}>
+  <div class="gtitle">📄 ${esc(title)}</div>
+  ${m.title_zh?`<div class="gmeta" style="color:var(--accent)">${esc(m.title_zh)}</div>`:""}
+  ${cats.length?`<div class="gmeta">${cats.slice(0,2).map(c=>esc(dispCat(c))).join(" · ")}</div>`:""}
+  <div class="gmeta">${f.size_kb} KB · ${esc(m.published||f.mtime)}</div>
+  ${m.score?`<div class="gmeta">重要度 ${m.score} 分</div>`:""}
+  <div class="gmeta" style="margin-top:8px;display:flex;gap:10px">${libOpenBtns(f.rel)}</div>
+</div>`;}
+function libListRow(f){const m=f.meta||{};const title=m.title||f.name.replace(/\.pdf$/i,"");const titleCell=esc(title)+(m.title_zh?`<div style="color:var(--muted);font-size:12px">${esc(m.title_zh)}</div>`:"");const op=`${libOpenBtns(f.rel)}<span class="oplink" onclick="libCtx(event,'${jsq(f.rel)}')">⋯</span>`;return `<tr${selRowCls("library",f.rel)} ${selAttr("library",f.rel)} ondblclick="openWith('default','${jsq(f.rel)}')" oncontextmenu="libCtx(event,'${jsq(f.rel)}')"><td><input type="checkbox" data-sel-own ${libChecked.has(f.rel)?"checked":""}></td><td class="ttitle">${titleCell}</td><td class="tdim">${m.note?"📝":"-"}</td><td class="tdim">${m.categories?esc(dispCat(m.categories.split(",")[0])):"-"}</td><td class="tdim">${esc(m.published||f.mtime)}</td><td class="tdim">${m.score?`<b style="color:${scoreColor(m.score)}">${m.score}分</b>`:"-"}</td><td style="white-space:nowrap">${op}</td></tr>`;}
+function libZoteroRow(f){const m=f.meta||{};const title=m.title||f.name.replace(/\.pdf$/i,"");const tags=parseTags(m.tags).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}">${esc(t)}</span>`).join(" ")||"-";return `<tr${selRowCls("library",f.rel)} ${selAttr("library",f.rel)} ondblclick="openWith('default','${jsq(f.rel)}')" oncontextmenu="libCtx(event,'${jsq(f.rel)}')"><td><input type="checkbox" data-sel-own ${libChecked.has(f.rel)?"checked":""}></td><td class="ttitle">${esc(title)}${m.title_zh?`<div style="color:var(--accent);font-size:12px">${esc(m.title_zh)}</div>`:""}</td><td class="tdim" style="max-width:180px;word-break:break-all">${m.arxiv_id?(m.title_zh?esc(m.title_zh):`<span class="oplink" onclick="translateTitle('${m.arxiv_id}',this)">译</span>`):"-"}</td><td class="tdim">预印本</td><td style="white-space:nowrap">${libOpenBtns(f.rel)}</td><td style="max-width:140px">${tags}</td><td><span class="oplink" onclick="libCtx(event,'${jsq(f.rel)}')">⋯</span></td></tr>`;}
+function libOpenBtns(rel){return `<span class="oplink" onclick="openWith('wps','${jsq(rel)}')">WPS</span><span class="oplink" onclick="openWith('chrome','${jsq(rel)}')">浏览器</span><span class="oplink" onclick="openWith('xlj','${jsq(rel)}')">小绿鲸</span>`;}
+function toggleAllLib(cb){setAllSel("library",cb.checked);}
+function batchDeleteLib(){if(!libChecked.size)return;if(!confirm(`确定删除选中的 ${libChecked.size} 个文件？此操作不可恢复。`))return;api("delete_files")([...libChecked]).then(r=>{toast(`已删除 ${r.deleted} 个`);clearSel("library");loadLibrary();});}
+function libGo(p){libPage=p;renderLib();}
+function libCtx(e,rel){e.preventDefault();showCtx(e.clientX,e.clientY,
+  [{app:"wps",label:"WPS 打开",target:rel},{app:"chrome",label:"浏览器打开",target:rel},{app:"xlj",label:"小绿鲸打开",target:rel}],
+  [{t:"重命名",f:()=>renameLib(rel)},{t:"删除",f:()=>{if(confirm("确定删除该文件？此操作不可恢复。"))api("delete_files")([rel]).then(()=>loadLibrary());},danger:true}]);}
+async function renameLib(rel){const n=prompt("新文件名（含 .pdf）：");if(!n)return;const r=await api("rename_file")(rel,n);if(r.ok){toast("已重命名");loadLibrary();}else toast(r.msg||"重命名失败");}
+async function newFolder(){const name=prompt("文件夹名称：");if(!name)return;const r=await api("create_folder")(libCwd,name);if(r.ok){toast("已创建");loadLibrary();}else toast(r.msg||"失败");}
+
+
+// ---- 收藏 ----
+let starView=store.get("starview","list"),starChecked=new Set(),starItems=[];
+async function loadStarred(){try{starData=await api("get_papers")("starred",500);renderStar();}catch(e){toast("加载失败："+errText(e));}}
+let starData=[];
+function setStarView(el){document.querySelectorAll("#star-view button").forEach(b=>b.classList.remove("on"));el.classList.add("on");starView=el.dataset.v;store.set("starview",starView);renderStar();}
+function starSort(list){const mode=$("star-sort").value;return [...list].sort((a,b)=>{if(mode==="alpha")return (a.title||"").localeCompare(b.title||"");if(mode==="date")return String(b.published||"").localeCompare(String(a.published||""));return (b.score||0)-(a.score||0);});}
+function renderStar(){const items=starSort(starData);starItems=items;const body=$("star-body");selBar("starred");
+  if(starView==="grid"){body.innerHTML=items.length?items.map(p=>pCard(p)).join(""):'<div class="empty">暂无收藏</div>';}
+  else if(starView==="list"){body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllStar(this)"></th><th>标题</th><th>摘要</th><th>时间</th><th>重要度</th><th>操作</th></tr></thead><tbody>${items.map(starRow).join("")}</tbody></table></div>`;}
+  else{body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllStar(this)"></th><th>标题</th><th>译文标题</th><th>附件</th><th>标签</th><th>操作</th></tr></thead><tbody>${items.map(starZRow).join("")}</tbody></table></div>`;}}
+function starOps(p){return `<span class="oplink" onclick="openWith('default','${p.arxiv_id}')">打开</span><span class="oplink" onclick="bibtexCopy('${p.arxiv_id}')">BibTeX</span><span class="oplink" onclick="translateOne('${p.arxiv_id}')">翻译</span><span class="oplink" onclick="summaryOne('${p.arxiv_id}')">摘要</span><span class="oplink" onclick="starCtx(event,'${p.arxiv_id}')">⋯</span>`;}
+function starRow(p){const abs=(p.abstract||"");return `<tr${selRowCls("starred",p.arxiv_id)} ${selAttr("starred",p.arxiv_id)} ondblclick="openWith('default','${p.arxiv_id}')" oncontextmenu="starCtx(event,'${p.arxiv_id}')"><td><input type="checkbox" data-sel-own ${starChecked.has(p.arxiv_id)?"checked":""}></td><td class="ttitle">${esc(p.title)}${p.title_zh?`<div style="color:var(--accent);font-size:12px">${esc(p.title_zh)}</div>`:""}</td><td class="tdim" style="max-width:320px">${esc(abs.slice(0,140))}${abs.length>140?"…":""}</td><td class="tdim">${esc(p.published||"")}</td><td class="tdim">${p.score?p.score+"分":"-"}</td><td>${starOps(p)}</td></tr>`;}
+function starZRow(p){const tags=parseTags(p.tags).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}">${esc(t)}</span>`).join(" ")||"-";return `<tr${selRowCls("starred",p.arxiv_id)} ${selAttr("starred",p.arxiv_id)} ondblclick="openWith('default','${p.arxiv_id}')" oncontextmenu="starCtx(event,'${p.arxiv_id}')"><td><input type="checkbox" data-sel-own ${starChecked.has(p.arxiv_id)?"checked":""}></td><td class="ttitle">${esc(p.title)}</td><td class="tdim" style="max-width:180px">${p.title_zh?esc(p.title_zh):"-"}</td><td><span class="oplink" onclick="openWith('default','${p.arxiv_id}')">查看</span></td><td style="max-width:140px">${tags}</td><td>${starOps(p)}</td></tr>`;}
+async function bibtexCopy(id){const b=await api("bibtex")(id);if(b){api("copy_to_clipboard")(b).then(ok=>toast(ok?"BibTeX 已复制":"复制失败"));}}
+function toggleAllStar(cb){setAllSel("starred",cb.checked);}
+function batchDeleteStar(){if(!starChecked.size)return;if(!confirm(`确定取消收藏选中的 ${starChecked.size} 篇？`))return;Promise.all([...starChecked].map(id=>api("set_status")(id,"new"))).then(()=>{toast("已取消收藏");clearSel("starred");loadStarred();});}
+function starCtx(e,id){e.preventDefault();showCtx(e.clientX,e.clientY,
+  [{app:"wps",label:"WPS 打开",target:id},{app:"chrome",label:"浏览器打开",target:id},{app:"xlj",label:"小绿鲸打开",target:id}],
+  [{t:"取消收藏",f:()=>api("set_status")(id,"new").then(()=>loadStarred()),danger:true}]);}
+
+// ---- 右键菜单 ----
+let ctxJustOpened=false;
+function showCtx(x,y,opens,items){
+  const m=$("ctxmenu");
+  let openRow="";
+  if(opens&&opens.length){
+    openRow=`<div style="display:flex;gap:6px;padding:8px 8px 4px">`+opens.map(o=>`<button class="btn small" style="flex:1;white-space:nowrap" onclick="ctxOpen('${o.app}','${jsq(o.target)}')">${o.label}</button>`).join("")+`</div>`;
+  }
+  const rest=(items||[]).map((it,i)=>`<div class="${it.danger?"danger":""}" onclick="ctxItem(${i})">${esc(it.t)}</div>`).join("");
+  m.innerHTML=openRow+(openRow&&rest?'<div class="sep"></div>':'')+rest;
+  m._items=items||[];
+  m.style.display="block";
+  // 先显示再量尺寸，卡片菜单现在有 7 项，按固定 220/120 夹会超出窗口底部
+  const w=m.offsetWidth||200,h=m.offsetHeight||160;
+  m.style.left=Math.max(4,Math.min(x,window.innerWidth-w-8))+"px";
+  m.style.top=Math.max(4,Math.min(y,window.innerHeight-h-8))+"px";
+  // 左键「⋯」菜单是在一次 click 里打开的，紧随其后的冒泡到 document 的关闭逻辑
+  // 会把刚打开的菜单当场关掉，所以本次事件内跳过关闭（右键菜单不受影响）。
+  ctxJustOpened=true;setTimeout(()=>{ctxJustOpened=false;},0);
+}
+function ctxOpen(app,target){$("ctxmenu").style.display="none";openWith(app,target);}
+function ctxItem(i){const m=$("ctxmenu");const it=m._items[i];m.style.display="none";if(it&&it.f)it.f();}
+document.addEventListener("click",e=>{if(ctxJustOpened)return;const m=$("ctxmenu");if(m&&e.target&&m.contains(e.target))return;m.style.display="none";});
+
+// ---- 通用 ----
+async function refreshStats(){try{const s=await api("get_stats")();$("st-total").textContent=s.total;$("st-dl").textContent=s.downloaded;$("st-star").textContent=s.starred;
+  const arc=document.querySelector('#home-scope button[data-s="archived"]');
+  if(arc)arc.textContent=`已归档${s.archived?" ("+s.archived+")":""}`;
+  if(s.trash!==undefined){$("st-trash").textContent=s.trash;$("st-trash-wrap").style.display=s.trash>0?"":"none";}}catch(e){}}
+async function refreshAll(){refreshStats();loadHome();loadTags();if(current==="library")loadLibrary();if(current==="starred")loadStarred();}
+async function loadTags(){try{const ts=await api("get_all_tags")();const o='<option value="">全部标签</option>'+ts.map(t=>`<option value="${esc(t.name)}">${esc(t.name)} (${t.count})</option>`).join("");$("home-tag").innerHTML=o;$("lib-tag").innerHTML=o.replace('全部标签','标签');}catch(e){}}
+function syncNow(){api("sync_now")().then(r=>{if(r&&r.error)toast(r.error);});}
+function downloadTop(){api("download_top")(parseInt($("dl-topn").value)||5).then(r=>{if(!r)return;if(r.error)toast(r.error);else if(r.started===false)toast(r.msg||"没有需要下载的论文");else toast(`已把 ${r.count} 篇加入下载队列，进度在「下载」页查看`);});}
+
+// ---- 下载任务管理 ----
+let dlTasks=[];
+async function loadDownloads(){
+  try{
+    const prev=dlTasks;
+    dlTasks=await api("get_download_tasks")();
+    renderDownloads();
+    // 有任务刚完成/失败时刷新卡片（下载按钮 → PDF 按钮）
+    const prevDone=new Set(prev.filter(t=>t.status!=="downloading").map(t=>t.id));
+    const nowDone=new Set(dlTasks.filter(t=>t.status!=="downloading").map(t=>t.id));
+    const newlyDone=[...nowDone].filter(id=>!prevDone.has(id));
+    if(newlyDone.length){refreshAll();}
+  }catch(e){}
+}
+function _dlStatus(t){
+  if(t.status==="done")return "✅";
+  if(t.status==="failed")return "❌";
+  return '<span class="spin"></span>';
+}
+function renderDownloads(){
+  const box=$("downloads-list");
+  if(!box)return;
+  if(!dlTasks.length){box.innerHTML='<div class="empty">暂无下载任务</div>';return;}
+  const downloading=dlTasks.filter(t=>t.status==="downloading");
+  const finished=dlTasks.filter(t=>t.status!=="downloading");
+  const dlBlock=downloading.map(t=>{
+    const pct=t.progress||0;
+    return `<div class="dl-item">
+      <div class="dl-head">${_dlStatus(t)} <b>${esc(t.title||t.arxiv_id||"")}</b></div>
+      <div class="dl-meta">${esc(t.detail||"")}</div>
+      <div class="dlbar"><div class="dlbar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join("");
+  const finBlock=finished.map(t=>{
+    if(t.status==="done"){
+      return `<div class="dl-item done">
+        <div class="dl-head">✅ <b>${esc(t.title||t.arxiv_id||"")}</b></div>
+        <div class="dl-meta">${esc(t.path||"")}</div>
+      </div>`;
+    }
+    return `<div class="dl-item failed">
+      <div class="dl-head">❌ <b>${esc(t.title||t.arxiv_id||"")}</b></div>
+      <div class="dl-meta" style="color:var(--red)">${esc(t.error||t.detail||"下载失败")}</div>
+    </div>`;
+  }).join("");
+  box.innerHTML=`${dlBlock}${(downloading.length&&finished.length)?'<div class="dl-sep">已完成</div>':''}${finBlock}`;
+}
+async function clearDownloadTasks(){
+  try{await api("clear_download_tasks")();dlTasks=dlTasks.filter(t=>t.status==="downloading");renderDownloads();toast("已清除完成记录");}catch(e){toast("清除失败："+errText(e));}
+}
+// 「翻译/摘要」这两个按钮跟着当前选择走：有选中就只处理选中的，没选中则处理当页
+function batchIds(){
+  const ok=id=>id&&!String(id).startsWith("local:");
+  if(current==="library"){
+    const items=libChecked.size?libPageItems.filter(f=>libChecked.has(f.rel)):libPageItems;
+    return items.map(f=>(f.meta||{}).arxiv_id).filter(ok);
+  }
+  return (homeChecked.size?[...homeChecked]:homeItems.map(p=>p.arxiv_id)).filter(ok);
+}
+function batchTranslatePage(){const ids=batchIds();if(!ids.length){toast("本页没有可翻译论文");return;}startBatch("batch_translate",ids,`正在翻译 ${ids.length} 篇…`,"这些都已翻译过了");}
+function batchSummarizePage(){const ids=batchIds();if(!ids.length){toast("本页没有可摘要论文");return;}startBatch("batch_summarize",ids,`正在生成摘要 ${ids.length} 篇…`,"这些都已有摘要");}
+function batchTranslateAll(){if(!confirm("将翻译论文库中所有还没翻译的论文，篇数多时耗时较长。确定继续？"))return;startBatch("batch_translate",null,"准备翻译全部文献…","没有需要翻译的论文");}
+function batchSummarizeAll(){if(!confirm("将为论文库中所有还没摘要的论文生成 AI 摘要，篇数多时耗时较长。确定继续？"))return;startBatch("batch_summarize",null,"准备生成全部摘要…","没有需要摘要的论文");}
+// 导入是「移动」而不是复制：文件会离开用户原来自己整理的文件夹，
+// 所以动手前先说清楚规则，落地后再告诉他到底去了哪个目录。
+async function uploadPapers(){
+  if(!confirm("导入会把选中的 PDF 从原来的文件夹「移动」进论文库，并按设置里的小方向关键词归类；一个关键词都没命中的会进 _inbox 目录。确定继续？"))return;
+  try{
+    const r=await api("upload_papers")();
+    const imp=r.imported||[],fail=r.failed||[];
+    if(!imp.length&&!fail.length){toast("未选择文件");return;}
+    if(imp.length){
+      const dirs=(r.imported_dirs||[]).slice(0,3).join("、");
+      toast(`已移动导入 ${imp.length} 篇 → 论文库/${dirs}${(r.imported_dirs||[]).length>3?" 等":""}${dirs.includes("_inbox")?"（未命中关键词的都进了 _inbox，可在设置里补小方向关键词）":""}`);
+    }
+    if(fail.length)toast(`有 ${fail.length} 个失败：${fail.map(f=>f[1]).slice(0,3).join("；")}`);
+    refreshAll();
+  }catch(e){toast("导入出错："+errText(e));}
+}
+async function chooseLibDir(){try{const p=await api("choose_folder")();if(p){$("s-libdir").value=p;await saveSettingsOnly();toast("归档目录已更新");}}catch(e){toast("选择失败："+errText(e));}}
+// 打开本地 PDF 是瞬时的；只有这篇还没下载时后端会先静默下载，
+// 那一等就是十几秒，界面不动用户以为点坏了，所以慢的时候就提示一句。
+async function openWith(app,idOrRel){const slow=setTimeout(()=>toast("正在打开…（这篇还没下载，会先自动下载 PDF）"),500);try{const r=await api("open_with")(app,idOrRel);if(r&&r.msg)toast(r.msg);}catch(e){toast("打开失败："+errText(e));}finally{clearTimeout(slow);}}
+async function translateTitle(id,el){el.innerHTML='<span class="spin"></span>';try{await api("translate_title")(id);renderLib();}catch(e){toast("翻译失败："+errText(e));}}
+function renderPager(elId,total,tp,goName){const el=$(elId);if(!el)return;const page=elId==="home-pager"?homePage:libPage;const sizeVal=elId==="home-pager"?homePageSize:libPageSize;const pages=[];for(let i=1;i<=tp;i++){if(i<=2||i>tp-2||Math.abs(i-page)<=1)pages.push(i);}let btns="",prev=0;for(const i of pages){if(prev&&i-prev>1)btns+="<span>…</span>";btns+=`<button class="${i===page?"on":""}" onclick="${goName}(${i})">${i}</button>`;prev=i;}el.innerHTML=`<span>共 ${total} 条</span><button ${page<=1?"disabled":""} onclick="${goName}(${page-1})">‹</button>${btns}<button ${page>=tp?"disabled":""} onclick="${goName}(${page+1})">›</button><select onchange="${elId==="home-pager"?"homePageSize":"libPageSize"}=parseInt(this.value)||10;${elId==="home-pager"?"homePage=1;loadHome()":"libPage=1;renderLib()"}">${[10,20,50].map(n=>`<option value="${n}" ${n===sizeVal?"selected":""}>${n} 条/页</option>`).join("")}</select>`;}
+
+// ---- 设置 ----
+let categories={},majors=[],minors={};
+async function loadSettings(){try{categories=await api("get_categories")();const prof=await api("get_profile")();majors=prof.majors||[];minors=prof.minors||{};const s=await api("get_settings")();
+  $("major-chips").innerHTML=Object.entries(categories).map(([k,v])=>`<span class="mchip ${majors.includes(k)?"on":""}" data-k="${k}" onclick="toggleMajor('${k}',this)">${esc(v)}</span>`).join("");
+  renderMinorEditors();
+  $("s-dh").value=s.daily_hour;$("s-dm").value=s.daily_minute;$("s-autosync").checked=!!s.auto_sync_on_start;
+  $("s-autodl").checked=!!s.auto_download;$("s-topn").value=s.download_top_n;$("s-notify").checked=!!s.notify;
+  $("s-autostart").checked=!!s.autostart_enabled;$("s-shortcut").checked=!!s.desktop_shortcut;
+  $("s-libdir").value=s.library_dir||"";$("s-llmurl").value=s.llm_base_url||"";$("s-llmkey").value=s.llm_api_key||"";$("s-llmmodel").value=s.llm_model||"";
+  $("s-keepdays").value=String(s.pool_keep_days!=null?s.pool_keep_days:30);
+  $("s-s2key").value=s.semanticscholar_key||"";$("s-mailto").value=s.openalex_mailto||"";applyTheme(s.theme||"light");$("s-popacity").value=s.progress_opacity!=null?s.progress_opacity:100;applyProgressOpacity(s.progress_opacity!=null?s.progress_opacity:100);}catch(e){toast("设置加载失败："+errText(e));}}
+function toggleMajor(k,el){el.classList.toggle("on");if(majors.includes(k))majors=majors.filter(x=>x!==k);else majors.push(k);renderMinorEditors();saveProfileNow();}
+function renderMinorEditors(){const box=$("minor-editors");box.innerHTML=majors.map(k=>{const tags=(minors[k]||[]).map(t=>`<span class="mtag">${esc(t)} <b onclick="rmKw('${k}','${esc(t)}')">×</b></span>`).join("");return `<div class="set-row"><label>${esc(categories[k]||k)}</label><span><input type="text" style="width:280px" placeholder="关键词，回车添加" onkeydown="addKw(event,'${k}',this)">${tags?`<div class="minor-tags">${tags}</div>`:""}</span></div>`;}).join("")||'<div class="empty" style="padding:12px">请先选择大方向</div>';}
+function addKw(e,k,input){if(e.key!=="Enter"||!input.value.trim())return;if(!minors[k])minors[k]=[];if(!minors[k].includes(input.value.trim()))minors[k].push(input.value.trim());input.value="";renderMinorEditors();saveProfileNow();}
+function rmKw(k,t){minors[k]=minors[k].filter(x=>x!==t);renderMinorEditors();saveProfileNow();}
+function collectSettings(){return {auto_download:$("s-autodl").checked,download_top_n:parseInt($("s-topn").value)||5,notify:$("s-notify").checked,autostart:$("s-autostart").checked,desktop_shortcut:$("s-shortcut").checked,library_dir:$("s-libdir").value.trim(),daily_hour:parseInt($("s-dh").value)||8,daily_minute:parseInt($("s-dm").value)||0,auto_sync_on_start:$("s-autosync").checked,pool_keep_days:parseInt($("s-keepdays").value)||0,llm_base_url:$("s-llmurl").value.trim(),llm_api_key:$("s-llmkey").value.trim(),llm_model:$("s-llmmodel").value.trim(),semanticscholar_key:$("s-s2key").value.trim(),openalex_mailto:$("s-mailto").value.trim(),progress_opacity:parseInt($("s-popacity").value)||100};}
+// 设置页的「立即整理一次」：不想等下一次同步才把老论文挪走
+async function archiveNow(){
+  const d=parseInt($("s-keepdays").value)||0;
+  if(!d){toast("当前设的是「不自动归档」");return;}
+  if(!confirm(`把超过 ${d} 天、且没被收藏/下载/打标/写笔记的论文归档？\n数据不会删除，首页切到「已归档」还能看到。`))return;
+  try{
+    const r=await api("archive_pool")(d);
+    if(r&&r.ok){toast(`已归档 ${r.archived} 篇`);flashSaved("✓ 已整理");refreshStats();if(current==="home")loadHome();}
+    else toast("归档失败（详见日志）");
+  }catch(e){toast("归档失败："+errText(e));}
+}
+// 设置页原来只有右上角一句静态的「更改后自动保存」，改完到底成没成没有任何反馈
+// （开机自启失败/落盘失败都是静默的）。改成真的回执。
+function flashSaved(msg){
+  const el=$("settings-saved");if(!el)return;
+  el.textContent=msg||"✓ 已保存";el.classList.add("on");
+  clearTimeout(flashSaved._t);
+  flashSaved._t=setTimeout(()=>{el.textContent="更改后自动保存";el.classList.remove("on");},1800);
+}
+async function saveSettingsOnly(){try{const r=await api("save_settings")(collectSettings());if(r===false)toast("保存失败：设置没写进去（详见日志）");else flashSaved();}catch(e){toast("保存失败："+errText(e));}}
+async function saveProfileNow(){try{const r=await api("save_profile")({majors,minors});if(r===false)toast("方向保存失败（详见日志）");else flashSaved("✓ 方向已保存");}catch(e){toast("保存失败："+errText(e));}}
+
+// ---- 垃圾桶 ----
+let trashData=[],trashChecked=new Set();
+async function loadTrash(){
+  try{
+    const items=await api("get_trash")(200);
+    const scholarItems=await api("get_trashed_scholar")();
+    trashData=[...items.map(p=>({...p,type:"arxiv"}))];
+    scholarItems.forEach(s=>trashData.push({...s,type:"scholar",arxiv_id:"scholar:"+s.doi,title:s.title||"",doi:s.doi,data:s.data}));
+    renderTrash();
+    // 后端 get_trash 只返回最近 200 条，而首页「垃圾桶 N」统计的是全量；
+    // 之前这里直接用列表长度，两边数字对不上还以为丢数据了。
+    let arxivTotal=items.length;
+    try{const t=await api("get_trash_count")();if(typeof t==="number")arxivTotal=t;}catch(e){}
+    const total=arxivTotal+scholarItems.length,shown=trashData.length;
+    $("trash-count").textContent=total?`共 ${total} 篇`+(shown<total?`（只显示最近 ${shown} 条）`:""):"垃圾桶为空";
+  }catch(e){toast("加载失败："+errText(e));}
+}
+function renderTrash(){
+  const box=$("trash-list");
+  if(!trashData.length){box.innerHTML='<div class="empty">垃圾桶为空</div>';}
+  else{
+    box.innerHTML=trashData.map((p,i)=>{
+      if(p.type==="scholar"){
+        const d=p.data||{};
+        const authors=(d.authors||[]).slice(0,4).join(", ")+((d.authors||[]).length>4?" 等":"");
+        return `<div class="trash-card-wrap">
+          <input type="checkbox" class="trash-check" ${trashChecked.has(p.arxiv_id)?"checked":""} onchange="toggleTrashCheck('${esc(p.arxiv_id)}',this.checked)">
+          <div class="card">
+            <div class="trow"><h3>${esc(p.title)}</h3></div>
+            <div class="chips">${ccfBadge(d.ccf)}${d.venue?`<span class="badge src">${esc(d.venue)}</span>`:""}${d.year?`<span class="badge">${esc(d.year)}</span>`:""}<span class="badge" style="background:#fef3c7;color:#92400e">谷歌学术</span></div>
+            ${authors?`<div class="meta">${esc(authors)}</div>`:""}
+            <div class="actions"><button class="btn small" onclick="restoreScholar('${esc(p.doi)}')">♻️ 复原</button></div>
+          </div>
+        </div>`;
+      }
+      // arxiv paper in trash - reuse pCard layout (simplified)
+      const starBtn=p.status==="starred"?`<button class="btn small amber" onclick="restoreTrash('${p.arxiv_id}')">♻️ 复原</button>`:`<button class="btn small" onclick="restoreTrash('${p.arxiv_id}')">♻️ 复原</button>`;
+      const cats=(p.categories||"").split(",").filter(Boolean).map(c=>`<span class="chip">${esc(dispCat(c))}</span>`).join("");
+      const tags=parseTags(p.tags).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}">${esc(t)}</span>`).join("");
+      return `<div class="trash-card-wrap">
+        <input type="checkbox" class="trash-check" ${trashChecked.has(p.arxiv_id)?"checked":""} onchange="toggleTrashCheck('${esc(p.arxiv_id)}',this.checked)">
+        <div class="card">
+          <div class="trow"><span class="pdate">${esc(p.published||"")}</span><h3>${esc(p.title)}</h3>${!String(p.arxiv_id||"").startsWith("local:")?`<span class="arxid">arXiv:${esc(p.arxiv_id)}</span>`:""}</div>
+          ${p.title_zh?`<div class="zhtitle">${esc(p.title_zh)}</div>`:""}
+          <div class="chips">${cats}<span class="badge src">📄 arXiv</span>${p.citations?`<span class="badge">被引 ${p.citations}</span>`:""}</div>
+          ${p.abstract?`<div class="abstext">${esc(p.abstract)}</div>`:""}
+          <div class="meta">${esc(p.authors||"")}</div>
+          ${tags?`<div class="chips">${tags}</div>`:""}
+          <div class="actions">${starBtn}</div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+  const hasChecked=trashChecked.size>0;
+  $("trash-restore-btn").style.display=hasChecked?"":"none";
+  $("trash-purge-btn").style.display=hasChecked?"":"none";
+  $("trash-all").checked=trashData.length>0&&trashChecked.size===trashData.length;
+}
+// 垃圾桶以前只能进不能出：delete_trash_permanent 后端有、前端没接，
+// 移进来的论文永远清不掉。这里只删数据库记录，已下载的 PDF 留在磁盘上不动。
+async function purgeTrash(){
+  if(!trashChecked.size)return;
+  const ids=[...trashChecked].filter(i=>!String(i).startsWith("scholar:"));
+  if(!ids.length){toast("选中的都是谷歌学术条目，用「♻️ 复原」即可移除");return;}
+  if(!confirm(`永久删除 ${ids.length} 条论文记录？已下载到论文库的 PDF 文件不会被删。`))return;
+  try{
+    const r=await api("delete_trash_permanent")(ids);
+    trashChecked.clear();await loadTrash();refreshStats();
+    toast(`已永久删除 ${r&&r.deleted!=null?r.deleted:ids.length} 条记录`);
+  }catch(e){toast("删除失败："+errText(e));}
+}
+function toggleTrashCheck(id,checked){if(checked)trashChecked.add(id);else trashChecked.delete(id);renderTrash();}
+function toggleAllTrash(checked){trashChecked.clear();if(checked)trashData.forEach(p=>trashChecked.add(p.arxiv_id));renderTrash();}
+function invertTrash(){const all=new Set(trashData.map(p=>p.arxiv_id));trashChecked.forEach(id=>all.delete(id));trashChecked=all;renderTrash();}
+async function restoreTrash(ids){
+  if(!ids){ids=[...trashChecked];if(!ids.length)return;}
+  else if(typeof ids==="string"){ids=[ids];}
+  const arxivIds=ids.filter(i=>!String(i).startsWith("scholar:"));
+  const scholarDois=ids.filter(i=>String(i).startsWith("scholar:")).map(i=>i.slice(8));
+  try{
+    if(arxivIds.length)await api("restore_trash")(arxivIds);
+    for(const doi of scholarDois){await api("restore_scholar")(doi);}
+    trashChecked.clear();
+    await loadTrash();refreshAll();toast("已复原");
+  }catch(e){toast("复原失败："+errText(e));}
+}
+async function restoreScholar(doi){
+  try{await api("restore_scholar")(doi);trashChecked.delete("scholar:"+doi);await loadTrash();toast("已复原");}catch(e){toast("失败："+errText(e));}
+}
+// 从前沿探索移入垃圾桶
+async function trashArxiv(arxivId){try{await api("set_status")(arxivId,"trash");toast("已移入垃圾桶");refreshAll();}catch(e){toast("操作失败："+errText(e));}}
+// 从谷歌学术移入垃圾桶
+async function trashScholar(p){
+  try{
+    await api("trash_scholar")(p.doi||"",p.title||"",p);
+    toast("已移入垃圾桶");
+    if(current==="scholar"){scholarSearch();}
+    refreshStats();
+  }catch(e){toast("操作失败："+errText(e));}
+}
+
+// ---- 谷歌学术 CCF 筛选 ----
+let ccfFilter={A:false,B:false,C:false,none:false,journal:false,conference:false};
+function toggleCcf(el){const v=datasetOf(el,"v");ccfFilter[v]=!ccfFilter[v];el.classList.toggle("on",ccfFilter[v]);$("sch-apply-filter").style.display=Object.values(ccfFilter).some(Boolean)?"":"none";}
+function datasetOf(el,k){return el.getAttribute("data-"+k);}
+function applyCcfFilter(){scholarSearch();}
+
+// ---- 谷歌学术状态持久化 ----
+function saveScholarState(){try{localStorage.setItem("arxiver_scholar",JSON.stringify({query:$("sch-q").value,year:$("sch-year").value,page:schPage,ccfFilter}));}catch(e){}}
+function restoreScholarState(){try{const s=localStorage.getItem("arxiver_scholar");if(!s)return;const st=JSON.parse(s);if(st.query){$("sch-q").value=st.query;}if(st.year){$("sch-year").value=st.year;}if(st.ccfFilter){ccfFilter=st.ccfFilter;document.querySelectorAll("#sch-ccf-filter .ccf-chip").forEach(el=>{const v=datasetOf(el,"v");el.classList.toggle("on",!!ccfFilter[v]);});$("sch-apply-filter").style.display=Object.values(ccfFilter).some(Boolean)?"":"none";}schPage=st.page||0;return st.query||null;}catch(e){return null;}}
+
+// ---- 初始化 ----
+function apiReady(){try{return !!(window.pywebview&&window.pywebview.api&&typeof window.pywebview.api.get_papers==="function");}catch(e){return false;}}
+function initApp(){
+  api("get_categories")().then(c=>{if(c)catNames=c;}).catch(()=>{});
+  refreshStats();loadHome();loadTags();
+}
+function tryInit(){if(apiReady()){initApp();return true;}return false;}
+if(!tryInit()){
+  // pywebview 的 window.pywebview.api 是在页面加载完成后才注入的（NavigationCompleted 之后），
+  // 必须等 pywebviewready 事件后再调用，否则会报 "Cannot read properties of undefined (reading 'api')"，
+  // 导致首页空白、统计数停留在 "-"（即“每次打开之前抓取的论文都不见了”）。
+  window.addEventListener("pywebviewready",function(){
+    tryInit();
+    setTimeout(tryInit,400);
+    setTimeout(tryInit,1200);
+  });
+}
+// 兜底：无论事件是否触发，都定时重试，确保数据一定加载出来
+[1000,2500,5000].forEach(function(ms){setTimeout(function(){if(apiReady()){initApp();}},ms);});
+</script>
+</body>
+</html>

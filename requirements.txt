@@ -1,0 +1,19 @@
+# 数据抓取
+arxiv>=2.1.3
+feedparser>=6.0
+httpx>=0.27
+
+# 定时调度
+APScheduler>=3.10
+
+# 桌面壳 / 托盘 / 通知
+pywebview>=5.4
+pystray>=0.19.5
+Pillow>=11.0
+winotify>=1.1
+
+# 工具
+pathvalidate>=3.2
+
+# 打包（开发用）
+pyinstaller>=6.10
