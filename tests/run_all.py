@@ -59,7 +59,6 @@ def find_node() -> str | None:
     cands += sorted(glob.glob(
         os.path.join(os.path.expanduser("~"), ".workbuddy-ai", "binaries",
                      "node", "versions", "*", "node.exe")))
-    cands += [r"F:\software\nodejs\node.exe"]
     for cand in cands:
         if cand and os.path.exists(cand):
             return cand
