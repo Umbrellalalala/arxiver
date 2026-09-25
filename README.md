@@ -4,6 +4,12 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue) ![Python](https://img.shields.io/badge/Python-3.10%2B-yellow) ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey) ![Deps](https://img.shields.io/badge/UI-pywebview-green)
 
+## 界面
+
+![Arxiver 前沿探索页](docs/arxiver.png)
+
+左侧是前沿探索 / 谷歌学术 / 论文库 / 下载 / 收藏 / 垃圾桶，右侧一屏看完：顶部统计卡（当前筛选、推荐池总数）、时间窗与相关度筛选，下面是打分排序后的论文卡片（分数、来源徽章、摘要可展开）。
+
 每天刷 arXiv 新列表是件很奢侈的事。Arxiver 的思路是：**多源抓取 → 去重 → 按画像打分 → 入库 → 可选自动下载**，把「今天有什么值得看」压缩成一次通知。
 
 ## 功能
