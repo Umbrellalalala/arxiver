@@ -64,11 +64,19 @@ class Pipeline:
         self.arxiv = ArxivClient()
         self.hf = HFDailyClient()
         self._s2 = None
+        # 记下当时的 key：属性里比对用。初值必须取配置里的真实值，
+        # 留 None 会让「key 其实是空的」也被当成变过，把外部注入的假客户端
+        # （测试直接写 self._s2）冲掉换成真客户端去联网。
+        self._s2_key = self.cfg.get("semanticscholar_key", "") or ""
 
     @property
     def s2(self) -> SemanticScholarClient:
-        if self._s2 is None:
-            self._s2 = SemanticScholarClient(self.cfg.get("semanticscholar_key", ""))
+        # key 是在客户端构造时固定下来的，所以设置里改了 key 必须重建客户端，
+        # 否则「填了 API key 提速」要等到下次重启才生效（限速照旧撞 429）。
+        key = self.cfg.get("semanticscholar_key", "") or ""
+        if self._s2 is None or self._s2_key != key:
+            self._s2 = SemanticScholarClient(key)
+            self._s2_key = key
         return self._s2
 
     def sync(self, days: int = 1, auto_download: bool | None = None,
@@ -229,10 +237,35 @@ class Pipeline:
                     log.warning("种子推荐失败（忽略）%s: %s", sid, e)
 
         papers_count = len(seen)
+
+        def _finish(cnt: int, downloaded=(), failed=()) -> dict:
+            """所有 return 路径都从这里走：自动归档必须每轮都跑一次。
+
+            原来归档代码写在 `papers_count == 0` 的早退分支**之后**，于是
+            「今天一篇都没抓到」的那些天池子永远不瘦身。keep_days 也放进
+            try：配置里填了非数字时不该把整轮同步的结果一起丢掉。
+            """
+            archived = 0
+            try:
+                keep_days = int(self.cfg.get("pool_keep_days", 30) or 0)
+                archived = self.lib.archive_stale(keep_days)
+                if archived:
+                    log.info("sync: 自动归档 %d 篇（%d 天没被收藏/下载/标注）",
+                             archived, keep_days)
+            except Exception as e:
+                log.warning("sync: 自动归档失败（不影响本次同步）: %s", e)
+            return {
+                "papers": cnt,
+                "new": new_total,
+                "downloaded": list(downloaded),
+                "failed": list(failed),
+                "archived": archived,
+                "elapsed": round(time.time() - t0, 1),
+            }
+
         if papers_count == 0:
             _prog("没有抓到新论文", 100)
-            return {"papers": 0, "new": 0, "downloaded": [], "failed": [],
-                    "elapsed": round(time.time() - t0, 1)}
+            return _finish(0)
 
         # 5) 补引用数（尽力而为，限制批量大小避免拖慢）
         try:
@@ -278,23 +311,7 @@ class Pipeline:
             failed = [p.title for p in failed_papers]
 
         # 收尾：把没人理的老论文挪出推荐池（只改状态，不删数据）
-        archived = 0
-        keep_days = int(self.cfg.get("pool_keep_days", 30) or 0)
-        try:
-            archived = self.lib.archive_stale(keep_days)
-            if archived:
-                log.info("sync: 自动归档 %d 篇（%d 天没被收藏/下载/标注）", archived, keep_days)
-        except Exception as e:
-            log.warning("sync: 自动归档失败（不影响本次同步）: %s", e)
-
-        return {
-            "papers": papers_count,
-            "new": new_total,
-            "downloaded": downloaded,
-            "failed": failed,
-            "archived": archived,
-            "elapsed": round(time.time() - t0, 1),
-        }
+        return _finish(papers_count, downloaded, failed)
 
     def top_period(self, days: int, limit: int = 15) -> list[Paper]:
         """本地库中最近 N 天入库的论文按热度排序（周报用）."""

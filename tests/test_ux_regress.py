@@ -16,6 +16,14 @@
 8. Pipeline.sync 现在带进程内唯一互斥锁：手动 + 定时同时到也只有一个真跑。
 9. 批量翻译/摘要的完成数以前把失败也计入（没配 AI 时「翻译完成 300 篇」
    其实一篇没翻）；中断标志也从一个共享 Event 拆成按类型各一个。
+10. 自动归档按 published 判新旧，而 Semantic Scholar 只给年份 "2026"，
+   字符串比 "2026" < "2026-08-26" 成立 → 线上 52 篇种子推荐**进池当天**全被
+   归档，种子推荐功能等于静默失效。判据改成 fetched_at（进池时间），
+   并且日期在入库时统一补齐成 YYYY-MM-DD。
+11. 三个「平时不出事」的隐患：clear_local_paths 把路径当 LIKE 模式（`_inbox`
+    的下划线是通配符，会连不相干的行一起清空）；download_top 可能挑中
+    local: 行去抓 arxiv.org/pdf/local:xxx；atomic_write_text 用固定 .tmp 名，
+    多个下载线程同时写 downloads.json 会互相截断。
 
 运行: .venv/Scripts/python.exe tests/test_ux_regress.py
 """
@@ -313,6 +321,21 @@ def _dated(days: int, i: int) -> Paper:
                  published=(datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d"))
 
 
+def _s2_stub(i: int) -> Paper:
+    """Semantic Scholar 那种只有年份的日期（曾经把整批种子推荐秒归档）。"""
+    return Paper(arxiv_id=f"2609.{93000 + i}", title=f"S2 rec {i}",
+                 abstract="abs", authors=["A"], categories=["cs.CL"],
+                 published=str(datetime.now().year), source="s2")
+
+
+def _in_pool_since(lib, arxiv_id: str, days: int) -> None:
+    """伪造「进池时间」：upsert 总会把 fetched_at 写成 now，测试要能往回拨。"""
+    with lib._lock:
+        lib._conn.execute("UPDATE papers SET fetched_at=? WHERE arxiv_id=?",
+                          (time.time() - days * 86400, arxiv_id))
+        lib._conn.commit()
+
+
 def test_auto_archive(lib) -> None:
     api = Api(get_config(), lib)
     stale = [0, 1, 2, 3, 4]
@@ -320,6 +343,8 @@ def test_auto_archive(lib) -> None:
     for i in stale + fresh:
         lib.upsert([_dated(60 if i in stale else 2, i)])
     ids = lambda n: f"2609.{92000 + n}"
+    for i in stale:
+        _in_pool_since(lib, ids(i), 60)
     api.lib.set_status(ids(1), "starred")           # 收藏过
     lib.set_tags(ids(2), ["cv"])                    # 打过标签
     lib.set_note(ids(3), "看过一点")                 # 写过笔记
@@ -327,7 +352,7 @@ def test_auto_archive(lib) -> None:
     before_active = lib.count_papers()
 
     n = lib.archive_stale(30)
-    check(n == 1, "只有「60 天 + 完全没人理」的那篇被归档", f"archived={n}")
+    check(n == 1, "只有「进池 60 天 + 完全没人理」的那篇被归档", f"archived={n}")
     check(lib.get_papers(limit=500, status="archived")[0]["arxiv_id"] == ids(0),
           "归档的就是它", str([p["arxiv_id"] for p in lib.get_papers(limit=500, status="archived")]))
     act = {p["arxiv_id"] for p in lib.get_papers(limit=100000)}
@@ -342,12 +367,166 @@ def test_auto_archive(lib) -> None:
     check(lib.get(ids(0))["status"] == "new", "重新被抓回来的归档论文自动放回推荐池")
     lib.archive_stale(30)
 
+    # ---- 当年这个功能上线后，线上库里 52/52 条种子推荐**当天**就被归档光 ----
+    # 判据以前是 published，而 "2026" < "2026-08-26" 按字符串成立。
+    s2_ids = [f"2609.{93000 + i}" for i in range(4)]
+    lib.upsert([_s2_stub(i) for i in range(4)])
+    check(lib.archive_stale(30) == 0,
+          "只有年份的种子推荐刚进池就归档 → 必须为 0 篇",
+          str([p["arxiv_id"] for p in lib.get_papers(limit=500, status="archived")]))
+    check(all(lib.get(i)["status"] == "new" for i in s2_ids), "它们仍在推荐池里")
+    check(s2_ids[0] in {p["arxiv_id"] for p in lib.get_papers(limit=500, status="new")},
+          "默认视图能看到它们")
+    # 真的躺了 60 天（进池时间）才归档，跟日期格式无关
+    for i in s2_ids:
+        _in_pool_since(lib, i, 60)
+    check(lib.archive_stale(30) == 4, "年付日期论文满 60 天后照样能归档")
+    for i in s2_ids:
+        lib.set_status(i, "new")
+        _in_pool_since(lib, i, 0)      # 放回池子的同时算「刚进池」，别被下一轮又归档
+
+    # 绕开 norm_date，直接塞一行「库里已经是年份格式」的历史数据：
+    # 这才能单独证明 archive_stale 换判据有效（线上升级后库里就是这种行）。
+    with lib._lock:
+        lib._conn.execute(
+            "INSERT INTO papers (arxiv_id,title,abstract,status,published,source,"
+            "fetched_at) VALUES ('legacy.1','Legacy','a','new','2026','s2',?)",
+            (time.time(),))
+        lib._conn.commit()
+    check(lib.archive_stale(30) == 0,
+          "库里存量的年份日期也不再触发归档（判据是进池时间）",
+          str(lib.get("legacy.1")["status"]))
+    _in_pool_since(lib, "legacy.1", 45)
+    check(lib.archive_stale(30) == 1, "存量年份行满 45 天后正常归档")
+
+    # upsert 不许把精确日期退化成年份，也不许把 arxiv 来源改成推荐来源
+    exact = _dated(2, 7)
+    lib.upsert([exact])
+    lib.upsert([Paper(arxiv_id=ids(7), title="Same paper", abstract="abs",
+                      authors=["A"], published=str(datetime.now().year), source="s2")])
+    row = lib.get(ids(7))
+    check(row["published"] == exact.published,
+          "S2 的年份日期不会覆盖已有的精确日期", f"{row['published']} vs {exact.published}")
+    check(row["source"] == "arxiv", "s2 不会把 arXiv 论文的来源改掉", row["source"])
+    # 反过来：arXiv 抓到 s2 行时要能纠正来源
+    lib.upsert([_dated(2, 8)])
+    check(lib.get(ids(8))["source"] == "arxiv", "arXiv 来源不被推荐源污染")
+
+    # 只有年份的日期进库前就补齐成 YYYY-MM-DD（库里按字符串比较日期）
+    lib.upsert([_s2_stub(9)])
+    check(len(lib.get(f"2609.{93009}")["published"]) == 10,
+          "年份日期在入库时被补齐", str(lib.get(f"2609.{93009}")["published"]))
+
     cfg = get_config()
     cfg.update({"pool_keep_days": 0})           # 设置里选「不自动归档」
     r = api.archive_pool(0)
     check(r.get("ok") is False and r.get("archived") == 0,
           "设置成「不自动归档」时，点「立即整理」也不会偷偷归档", str(r))
     cfg.update({"pool_keep_days": 30})
+
+
+def test_archive_runs_on_empty_sync(lib) -> None:
+    """一轮什么都没抓到的同步，也必须照样瘦身推荐池。
+
+    归档代码原先写在 `papers_count == 0` 的早退分支**之后**：连着几天没新论文
+    （或全网抓取都失败）时，归档永远不会执行。现在两条路径都走 _finish()。
+    """
+    from arxiver.core.pipeline import Pipeline
+    cfg = get_config()
+    cfg.update({"pool_keep_days": 30, "major_fields": [], "minor_topics": {},
+                "seed_papers": [], "auto_download": False})
+    pipe = Pipeline(cfg, lib)
+    # 所有源都空手而归
+    pipe.arxiv.fetch_recent = lambda *a, **k: []
+    pipe.arxiv.search_keywords = lambda *a, **k: []
+    pipe.hf.get_recent_days = lambda *a, **k: []
+    pipe.s2.related = lambda *a, **k: []
+
+    aid = f"2609.{92071}"
+    lib.upsert([_dated(1, 71)])
+    _in_pool_since(lib, aid, 45)
+    check(lib.get(aid)["status"] == "new", "归档前它还在池子里")
+
+    stat = pipe.sync(days=1, auto_download=False)
+    check(stat.get("papers") == 0, "这一轮确实一篇都没抓到", str(stat.get("papers")))
+    check(stat.get("archived", 0) >= 1,
+          "零论文的同步也会归档（旧代码在这条路径上直接 return，从不归档）", str(stat))
+    check(lib.get(aid)["status"] == "archived", "该被归档的那篇真的归档了",
+          str(lib.get(aid)["status"]))
+
+
+def test_paths_and_write_safety(api, lib) -> None:
+    """LIKE 通配符、local: 行、并发写文件——三个都是「平时不出事」的坑。"""
+    from arxiver.core.models import Paper as _P
+
+    hit, keep = "2609.95102", "2609.95101"
+    lib.upsert([_P(arxiv_id=hit, title="Inside inbox", abstract="x", authors=["A"],
+                   categories=["cs.CL"], published="2026-09-10"),
+                _P(arxiv_id=keep, title="Lookalike", abstract="x", authors=["A"],
+                   categories=["cs.CL"], published="2026-09-10")])
+    lib.mark_downloaded(hit, "D:\\lib\\_inbox\\2026\\hit.pdf")
+    lib.mark_downloaded(keep, "D:\\lib\\Xinbox\\2026\\keep.pdf")
+    n = lib.clear_local_paths("D:\\lib\\_inbox")
+    check(n == 1 and lib.get(hit)["local_path"] == "" and lib.get(keep)["local_path"],
+          "清目录时路径里的 _ 不被当成 LIKE 通配符（否则连 Xinbox 一起清）",
+          f"n={n} keep={lib.get(keep)['local_path']!r}")
+
+    # download_top 不能挑中本地导入的行：那没有 arXiv 编号可下
+    loc = "local:abcdef123456"
+    lib.upsert([_P(arxiv_id=loc, title="Local only", abstract="x", authors=["A"],
+                   categories=["cs.CL"], published="2026-09-09", source="local")])
+    with lib._lock:
+        lib._conn.execute("UPDATE papers SET local_path='', score=9999 WHERE arxiv_id=?",
+                          (loc,))
+        lib._conn.execute("UPDATE papers SET local_path='' WHERE arxiv_id IN (?,?)",
+                          (hit, keep))
+        lib._conn.commit()
+    tried: list[str] = []
+    api.pipeline.downloader.download = lambda p: (tried.append(p.arxiv_id), "")[1]
+    api.download_top(5)
+    time.sleep(0.5)
+    check(loc not in tried,
+          "download_top 跳过 local: 行（否则去抓 arxiv.org/pdf/local:xxx）", str(tried[:6]))
+
+    # atomic_write_text：并发写不能共用同一个 .tmp，失败时也不许留下半个文件
+    from arxiver.paths import atomic_write_text
+    import arxiver.paths as pmod
+    d = Path(tempfile.mkdtemp(prefix="arxiver-awt-"))
+    tgt = d / "x.json"
+
+    def _w(_: int) -> None:
+        atomic_write_text(tgt, json.dumps({"pad": "x" * 20000}))
+
+    th = [threading.Thread(target=_w, args=(i,)) for i in range(8)]
+    for t in th:
+        t.start()
+    for t in th:
+        t.join()
+    check(json.loads(tgt.read_text(encoding="utf-8")).get("pad"),
+          "8 线程并发写之后文件仍是完整 JSON")
+    check(not [p for p in d.iterdir() if p.name.endswith(".tmp")],
+          "并发写没有留下孤儿 .tmp", str([p.name for p in d.iterdir()]))
+
+    pmod.open = lambda *a, **k: (_ for _ in ()).throw(OSError("模拟写盘失败"))
+    try:
+        try:
+            atomic_write_text(d / "y.json", "junk")
+        except OSError:
+            pass
+    finally:
+        del pmod.open          # paths 里原本没有这个全局，删掉才恢复原状
+    check(not [p for p in d.iterdir() if p.name.endswith(".tmp")],
+          "写失败时把 .tmp 一起收掉", str([p.name for p in d.iterdir()]))
+
+    # 设置里改了 S2 key 要立刻生效（key 是构造时固定的，不重建就得等重启）
+    cfg = api.cfg
+    cfg.update({"semanticscholar_key": "key-one"})
+    first = api.pipeline.s2
+    cfg.update({"semanticscholar_key": "key-two"})
+    check(api.pipeline.s2 is not first, "换 key 后马上重建 S2 客户端",
+          str(api.pipeline.s2 is first))
+    check(api.pipeline.s2 is api.pipeline.s2, "key 没变时不反复重建")
+    cfg.update({"semanticscholar_key": ""})
 
 
 def test_scholar_cache(api) -> None:
@@ -362,6 +541,31 @@ def test_scholar_cache(api) -> None:
     check(len(c["items"]) == 80, "结果只留前几页，缓存文件不会无限涨",
           str(len(c["items"])))
     check(c["saved_at"] > 0, "带时间戳，前端才能说「这是 2 小时前存的」")
+
+
+def test_download_history(api) -> None:
+    """下载队列以前只在内存里：重启就空，看不出昨晚下没下成；排队的也撤不掉。"""
+    queued = api._dl_task_add("2609.77777", "Queued paper")
+    running = api._dl_task_add("2609.77778", "Running paper", started=True)
+    check(queued.get("started") is False and running.get("started") is True,
+          "任务区分「排队中」和「已经在传」")
+    r = api.skip_download(queued["id"])
+    check(r.get("ok") is True and api._dl_skipped(queued["id"]),
+          "排队中的能撤掉，worker 轮到它会跳过", str(r))
+    r2 = api.skip_download(running["id"])
+    check(r2.get("ok") is False and "取消不了" in (r2.get("msg") or ""),
+          "已经在传的不给假取消按钮", str(r2))
+
+    restarted = Api(get_config(), api.lib)     # 等价于重启进程
+    tasks = {t["id"]: t for t in restarted.get_download_tasks()}
+    check(queued["id"] in tasks and running["id"] in tasks, "重启后下载记录还在")
+    check(tasks[queued["id"]]["status"] == "skipped", "已取消的仍然是已取消")
+    check(tasks[running["id"]]["status"] == "failed"
+          and "中断" in tasks[running["id"]].get("detail", ""),
+          "重启时进行中的标成被中断，而不是永远转圈", str(tasks[running["id"]]))
+    cleared = restarted.clear_download_tasks()
+    check(cleared >= 2 and not restarted.get_download_tasks(),
+          "清除已完成会连带清掉磁盘记录（否则下次启动又复活）", str(cleared))
 
 
 def main() -> int:
@@ -391,8 +595,14 @@ def main() -> int:
     test_stale_tmp_cleanup()
     print("[11] 推荐池自动归档")
     test_auto_archive(lib)
-    print("[12] 谷歌学术结果缓存")
+    print("[12] 零论文同步也要归档")
+    test_archive_runs_on_empty_sync(lib)
+    print("[13] LIKE 通配符 / local: 过滤 / 并发写文件")
+    test_paths_and_write_safety(api, lib)
+    print("[14] 谷歌学术结果缓存")
     test_scholar_cache(api)
+    print("[15] 下载记录持久化与排队取消")
+    test_download_history(api)
 
     print("\n结果:", "PASS" if ok else "FAIL")
     lib.close()

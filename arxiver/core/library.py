@@ -59,6 +59,14 @@ def _decode_tags(s: str) -> list[str]:
     return [t for t in (s or "").split(",") if t.strip()]
 
 
+def _like_escape(v: str) -> str:
+    """把字符串变成 LIKE 里的字面量（转义符固定为 `!`）。
+
+    先转义 `!` 本身，再转义 `%` 和 `_`，顺序反了会把刚补上的 `!` 再转一次。
+    """
+    return v.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+
+
 class Library:
     def __init__(self) -> None:
         ensure_dirs()
@@ -154,7 +162,8 @@ class Library:
                 if not row["arxiv_id"]:
                     continue
                 cur = self._conn.execute(
-                    "SELECT status FROM papers WHERE arxiv_id=?", (row["arxiv_id"],)
+                    "SELECT status, source, published FROM papers WHERE arxiv_id=?",
+                    (row["arxiv_id"],)
                 )
                 existing = cur.fetchone()
                 if existing and existing["status"] == "trash":
@@ -163,14 +172,26 @@ class Library:
                     # 又被数据源抓回来，说明它现在还在被推荐：先前自动归档的放回
                     # 推荐池。用户主动改过的状态（收藏/已读/忽略）一律不动。
                     keep = "new" if existing["status"] == "archived" else existing["status"]
+                    # 来源只往「更权威」的方向改：arXiv 原文行不能被推荐/热榜源
+                    # 认成自己的，否则卡片上的来源标记会随每次同步乱跳。
+                    src = row["source"]
+                    pub = row["published"]
+                    if src != "arxiv" and existing["source"] == "arxiv":
+                        src = existing["source"]
+                    # S2 经常只给年份，norm_date 补成 "2026-01-01" 之后长度和真
+                    # 日期一样，看不出是猜的。所以干脆规定：已有的日期不被 S2
+                    # 改写——它没有信息量，改了只会把 3 月发的论文显示成 1 月。
+                    # 判据用**进来的** row["source"]，src 上面可能已被改写成 arxiv。
+                    if row["source"] == "s2" and existing["published"]:
+                        pub = existing["published"]
                     self._conn.execute(
                         """UPDATE papers SET title=?, abstract=?, authors=?, categories=?,
                            published=?, updated=?, pdf_url=?, abs_url=?, upvotes=?,
                            citations=?, source=?, score=?, fetched_at=?, status=?
                            WHERE arxiv_id=?""",
                         (row["title"], row["abstract"], row["authors"], row["categories"],
-                         row["published"], row["updated"], row["pdf_url"], row["abs_url"],
-                         row["upvotes"], row["citations"], row["source"], row["score"],
+                         pub, row["updated"], row["pdf_url"], row["abs_url"],
+                         row["upvotes"], row["citations"], src, row["score"],
                          time.time(), keep, row["arxiv_id"]),
                     )
                 else:
@@ -218,11 +239,16 @@ class Library:
         磁盘上删了/改了名却不更新库的话：卡片仍显示「📖 PDF」但点开报「尚未下载」，
         首页「已下载」计数也一直虚高。
         """
+        # 路径本身要当字面量匹配：库目录里到处都是 `_inbox`，而 LIKE 的 `_` 是
+        # 「任意一个字符」，不转义的话 `!_inbox` 能匹配到 `Xinbox`，把不相干论文
+        # 的 local_path 一起清空。转义符用 `!` 不用 `\\`——Windows 路径里全是反斜杠。
+        esc = _like_escape(path)
         with self._lock:
             cur = self._conn.execute(
                 "UPDATE papers SET local_path='' "
-                "WHERE local_path=? OR local_path LIKE ? OR local_path LIKE ?",
-                (path, path + "/%", path + "\\%"),
+                "WHERE local_path=? "
+                "OR local_path LIKE ? ESCAPE '!' OR local_path LIKE ? ESCAPE '!'",
+                (path, esc + "/%", esc + "\\%"),
             )
             self._conn.commit()
             return cur.rowcount
@@ -355,16 +381,23 @@ class Library:
         推荐池每天涨 300+ 条，一年十几万：列表、计数、下载与「全部翻译」的队列
         都会被这些早就没人翻的条目拖住。归档只改状态——首页筛选切到
         「已归档」还能看到，收藏过/下载过/打过标签笔记的一律不动。
+
+        判据是 fetched_at（进池时间）而不是 published：各源的日期格式不统一，
+        Semantic Scholar 只给年份 "2026"，按字符串比 "2026" < "2026-08-26" 成立，
+        实测把当天刚抓到的 52 篇种子推荐**全部**归档了，等于这个功能白做。
+        用 fetched_at 也更符合本意（「在池子里躺了 N 天没人管」），而且每次被
+        重新抓到都会刷新，仍在被推荐的自然不会归档。fetched_at<=0 是脏数据，
+        跳过而不是当成远古时间。
         """
         if days <= 0:
             return 0
-        cutoff = (datetime.now() - timedelta(days=int(days))).strftime("%Y-%m-%d")
+        cutoff_ts = time.time() - int(days) * 86400
         with self._lock:
             cur = self._conn.execute(
                 "UPDATE papers SET status='archived' "
-                "WHERE status='new' AND published<>'' AND published<? "
+                "WHERE status='new' AND IFNULL(fetched_at,0)>0 AND fetched_at<? "
                 "AND IFNULL(local_path,'')='' AND IFNULL(tags,'')='' AND IFNULL(note,'')=''",
-                (cutoff,))
+                (cutoff_ts,))
             self._conn.commit()
             return cur.rowcount
 
@@ -378,7 +411,10 @@ class Library:
         order_col = order if order in (
             "score DESC", "upvotes DESC", "citations DESC", "published DESC", "fetched_at DESC"
         ) else "score DESC"
-        sql = f"SELECT * FROM papers{where} ORDER BY {order_col} LIMIT ? OFFSET ?"
+        # 必须再加一个唯一列做 tiebreaker：热度/引用数大量并列（一堆 0），
+        # 只按它们排的话 LIMIT/OFFSET 分页会出现「同一篇在第 1 页和第 2 页都出现、
+        # 或者哪页都不出现」——服务端分页之后这个才会暴露出来。
+        sql = f"SELECT * FROM papers{where} ORDER BY {order_col}, arxiv_id LIMIT ? OFFSET ?"
         with self._lock:
             rows = self._conn.execute(sql, args + [limit, offset]).fetchall()
         return [dict(r) for r in rows]

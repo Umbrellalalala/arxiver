@@ -22,7 +22,7 @@ aside{width:200px;background:var(--side);color:#e5e7eb;display:flex;flex-directi
 .logo .dot{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#818cf8,#4f46e5);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
 .logo span{color:#818cf8}
 nav{flex:1;padding:6px 10px}
-nav button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;margin:2px 0;border:none;background:none;color:#d1d5db;border-radius:9px;cursor:pointer;font-size:14px;text-align:left}
+nav button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;margin:2px 0;border:none;background:none;color:#d1d5db;border-radius:9px;cursor:pointer;font-size:14px;text-align:left;position:relative}
 nav button:hover{background:var(--side2)}
 nav button.active{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff}
 .side-foot{padding:12px 18px;font-size:12px;color:#6b7280;border-top:1px solid var(--side2)}
@@ -52,7 +52,9 @@ h1{font-size:20px;font-weight:700}
 .btn.red{background:var(--red)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .stats{display:flex;gap:14px;margin-bottom:18px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 20px;flex:1;text-align:center;box-shadow:var(--shadow)}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 20px;flex:1;text-align:center;box-shadow:var(--shadow);transition:.15s}
+.stat[onclick]{cursor:pointer}
+.stat[onclick]:hover{border-color:var(--hover-border);transform:translateY(-1px)}
 .stat b{font-size:24px;display:block;background:linear-gradient(135deg,var(--accent2),var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .stat i{font-style:normal;color:var(--muted);font-size:12px}
 .filters{display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap;align-items:center}
@@ -91,7 +93,8 @@ h1{font-size:20px;font-weight:700}
 .card.sel,.gcard.sel{border-color:var(--accent);background:rgba(99,102,241,.07);box-shadow:0 0 0 3px rgba(99,102,241,.20)}
 .tbl tbody tr{cursor:default}
 .tbl tbody tr:hover{background:transparent}
-.tbl tbody tr:hover td{background:var(--chip)}
+.tbl tbody tr:hover td{background:rgba(99,102,241,.07)}
+body.dark .tbl tbody tr:hover td{background:rgba(129,140,248,.10)}
 .tbl tbody tr.sel td{background:rgba(99,102,241,.13)}
 .tbl tbody tr.sel:hover td{background:rgba(99,102,241,.18)}
 .tbl tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
@@ -111,6 +114,11 @@ body.dark.maxed::after{border-color:#3f4c63}
 .dl-item.done{border-left:3px solid #10b981}
 .dl-item.failed{border-left:3px solid var(--red)}
 .dl-sep{font-size:12px;color:var(--muted);margin:16px 0 10px;font-weight:600}
+/* 侧栏「下载」角标：还有几条在传，不点进去也看得见 */
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 7px;min-width:19px;text-align:center}
+body.side-collapsed .nav-badge{position:absolute;top:4px;right:2px;padding:0 4px;min-width:15px;margin:0}
+.dl-cancel{margin-left:auto;border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;flex-shrink:0}
+.dl-cancel:hover{color:var(--red)}
 .card .pdate{color:var(--muted);font-size:12px;flex-shrink:0;white-space:nowrap}
 .card .ai-result{margin-top:10px}
 .card .tag-note{border-top:1px dashed var(--border);margin-top:12px;padding-top:12px}
@@ -181,7 +189,11 @@ body.dark.maxed::after{border-color:#3f4c63}
 .slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
 .switch input:checked+.slider{background:var(--accent)}
 .switch input:checked+.slider:before{transform:translateX(18px)}
-#toastbox{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:500}
+#toastbox{position:fixed;bottom:22px;right:74px;display:flex;flex-direction:column;gap:8px;z-index:500}
+/* 长列表滚下去之后，回顶部要两下滚轮 —— 给个按钮 */
+.to-top{position:fixed;right:22px;bottom:22px;width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:16px;cursor:pointer;box-shadow:var(--shadow);display:none;z-index:300}
+.to-top.show{display:block}
+.to-top:hover{color:var(--accent);border-color:var(--accent)}
 .tmsg{background:#111827;color:#fff;padding:12px 17px;border-radius:10px;font-size:13px;max-width:400px;box-shadow:0 6px 20px rgba(0,0,0,.3);white-space:pre-line;animation:pop .25s}
 @keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
 .progress{display:none;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 15px;margin-bottom:16px}
@@ -220,7 +232,7 @@ body.dark.maxed::after{border-color:#3f4c63}
     <button data-view="home" class="active" title="前沿探索"><span class="ico">🚀</span><span class="txt">前沿探索</span></button>
     <button data-view="scholar" title="谷歌学术"><span class="ico">🎓</span><span class="txt">谷歌学术</span></button>
     <button data-view="library" title="论文库"><span class="ico">📚</span><span class="txt">论文库</span></button>
-    <button data-view="downloads" title="下载"><span class="ico">⬇️</span><span class="txt">下载</span></button>
+    <button data-view="downloads" title="下载"><span class="ico">⬇️</span><span class="txt">下载</span><span class="nav-badge" id="nav-dl-badge" style="display:none"></span></button>
     <button data-view="starred" title="收藏"><span class="ico">⭐</span><span class="txt">收藏</span></button>
     <button data-view="trash" title="垃圾桶"><span class="ico">🗑️</span><span class="txt">垃圾桶</span></button>
     <button data-view="settings" title="设置"><span class="ico">⚙️</span><span class="txt">设置</span></button>
@@ -250,8 +262,8 @@ body.dark.maxed::after{border-color:#3f4c63}
     <div class="stats">
       <div class="stat" id="st-filtered-wrap" title="按上面的时间/排序/标签/筛选条件，当前这一共多少条（分页器同一个数）"><b id="st-filtered">-</b><i id="st-filtered-label">当前筛选</i></div>
       <div class="stat"><b id="st-total">-</b><i>推荐池总数</i></div>
-      <div class="stat"><b id="st-dl">-</b><i>已下载</i></div>
-      <div class="stat"><b id="st-star">-</b><i>已收藏</i></div>
+      <div class="stat" style="cursor:pointer" title="点开论文库看这些文件" onclick="document.querySelector('[data-view=library]').click()"><b id="st-dl">-</b><i>已下载</i></div>
+      <div class="stat" style="cursor:pointer" title="点开收藏列表" onclick="document.querySelector('[data-view=starred]').click()"><b id="st-star">-</b><i>已收藏</i></div>
       <div class="stat" id="st-trash-wrap" style="display:none;cursor:pointer" onclick="document.querySelector('[data-view=trash]').click()"><b id="st-trash" style="color:var(--red)">-</b><i>垃圾桶</i></div>
     </div>
     <div class="filters">
@@ -447,6 +459,7 @@ body.dark.maxed::after{border-color:#3f4c63}
   <div class="ptrack"><div class="pbar" id="pbar"></div></div>
 </div>
 <div id="toastbox"></div>
+<button class="to-top" id="to-top" title="回到顶部" onclick="scrollTop()">↑</button>
 
 <script>
 const api=(m)=>window.pywebview.api[m];
@@ -460,8 +473,8 @@ const store={_mem:{},get(k,d){try{const v=localStorage.getItem(k);return v===nul
 
 // ---- 事件回调 ----
 window.Arxiver={
-  onSyncStart(){liveNewIds=new Set();liveRendered=new Set();liveGot=0;bgCount=false;showProgress("开始同步…",0);$("btn-refresh").disabled=true;},
-  onProgress(d){let text=d,pct=null;if(typeof d==="object"&&d.text!==undefined){text=d.text;pct=d.pct;}bgCount=false;if(!text){hideProgress();}else showProgress(text,pct);},
+  onSyncStart(){liveNewIds=new Set();liveRendered=new Set();liveGot=0;bgCount=false;barOwner="sync";showProgress("开始同步…",0);$("btn-refresh").disabled=true;},
+  onProgress(d){if(barOwner==="batch")return;let text=d,pct=null;if(typeof d==="object"&&d.text!==undefined){text=d.text;pct=d.pct;}bgCount=false;if(!text){hideProgress();}else showProgress(text,pct);},
   onNewPapers(d){
     if(!d)return;
     (d.ids||[]).forEach(id=>liveNewIds.add(id));
@@ -471,14 +484,14 @@ window.Arxiver={
     // 注意：进入计数模式后必须**每批都刷新文案**——只在「还没显示」时写的话，
     // 数字会永远停在第一批（实测第一版就踩了：热榜先回来 32 篇，之后 arXiv 的
     // 80/25/75/17 全没算进去，界面显示「已新增 32 篇」而库里已有 213 篇）。
-    if(bgCount||!$("progress").classList.contains("show")){
+    if(bgCount||(!barOwner&& !$("progress").classList.contains("show"))){
       bgCount=true;
       showProgress(`后台同步中… 已新增 ${liveGot} 篇`,null);
     }
     scheduleLiveRefresh();
   },
-  onSyncDone(s){bgCount=false;if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}hideProgress();$("btn-refresh").disabled=false;if(s&&s.papers!==undefined)toast(`同步完成：新增 ${s.new} 篇，共 ${s.papers} 篇候选${s.archived?`，归档 ${s.archived} 篇没人看的旧论文`:""}`);refreshAll();liveGot=0;setTimeout(()=>{liveNewIds=new Set();liveRendered=new Set();},6000);},
-  onSyncError(e){bgCount=false;if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}hideProgress();$("btn-refresh").disabled=false;liveGot=0;toast("同步失败："+errText(e));},
+  onSyncDone(s){bgCount=false;if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}if(barOwner==="sync")barOwner="";hideProgress();$("btn-refresh").disabled=false;if(s&&s.papers!==undefined)toast(`同步完成：新增 ${s.new} 篇，共 ${s.papers} 篇候选${s.archived?`，归档 ${s.archived} 篇没人看的旧论文`:""}`);refreshAll();liveGot=0;setTimeout(()=>{liveNewIds=new Set();liveRendered=new Set();},6000);},
+  onSyncError(e){bgCount=false;if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}if(barOwner==="sync")barOwner="";hideProgress();$("btn-refresh").disabled=false;liveGot=0;toast("同步失败："+errText(e));},
   onBatchTranslate(d){if(batchCancelled)return;showProgress(`翻译中 ${d.done}/${d.total}…`,Math.round(d.done/d.total*100),true);},
   onBatchTranslateDone(r){finishBatch("翻译",r);},
   onBatchSummarize(d){if(batchCancelled)return;showProgress(`摘要中 ${d.done}/${d.total}…`,Math.round(d.done/d.total*100),true);},
@@ -504,20 +517,24 @@ function applyLiveRefresh(){
   Promise.resolve(loadHome()).then(()=>{if(box)box.scrollTop=top;}).catch(()=>{});
 }
 function showProgress(text,pct,cancellable){const p=$("progress");if(!p)return;p.className="progress show";$("ptext").textContent=text;const x=$("pcancel");if(x)x.style.display=cancellable?"":"none";if(pct!=null){$("pbar").style.width=pct+"%";$("ppct").textContent=pct+"%";}}
-function hideProgress(){const p=$("progress");if(p)p.className="progress";}
+// 进度条只有一根，但同步和批量翻译/摘要可能同时在跑。
+// 不加归属的话：同步的 onProgress 会抢走文案、把「✕ 中断」变没，
+// 同步结束又把批量任务的进度条整根收掉（任务还在跑却看不见了）。
+let barOwner="";
+function hideProgress(){if(barOwner==="batch")return;const p=$("progress");if(p)p.className="progress";}
 // 「✕ 中断」只对批量翻译/摘要有效（后端只在每个任务开头查一次中断标志）。
 // 同步和下载根本没有中断实现，所以那些进度条上不显示这个按钮，别骗用户。
 function cancelBatch(){
   if(!batchKind){hideProgress();return;}
   batchCancelled=true;
   api("cancel_batch")(batchKind);
-  hideProgress();
+  barOwner="";hideProgress();
   toast("已请求中断：在途的几篇仍会跑完，还没开始的跳过");
 }
 // 后端收尾推的是 {done,failed,skipped,total,llm}：失败的不能再混进「完成」里报数
 function finishBatch(label,r){
   const wasCancel=batchCancelled;
-  batchCancelled=false;batchKind="";hideProgress();
+  batchCancelled=false;batchKind="";barOwner="";hideProgress();
   const ok=(r&&r.done)||0,bad=(r&&r.failed)||0,skip=(r&&r.skipped)||0;
   let m=`${wasCancel?"已中断，":""}${label}成功 ${ok} 篇`;
   if(bad)m+=`，失败 ${bad} 篇`;
@@ -552,6 +569,14 @@ lifeThemeTimer=setInterval(syncLifeTheme,1500);
 
 // ---- 侧边栏收起 ----
 function toggleSidebar(){const c=document.body.classList.toggle("side-collapsed");store.set("sidebar",c?"collapsed":"open");const t=$("side-toggle");if(t){t.textContent=c?"›":"‹";t.title=c?"展开侧边栏":"收起侧边栏";}}
+
+// ---- 回到顶部（滚动容器是 <main>，不是 documentElement）----
+function scrollTop(){const box=document.querySelector("main");if(box&&box.scrollTo)box.scrollTo({top:0,behavior:"smooth"});else if(box)box.scrollTop=0;}
+(function(){
+  const box=document.querySelector("main"),b=$("to-top");
+  if(!box||!b)return;
+  box.addEventListener("scroll",()=>{b.classList.toggle("show",box.scrollTop>600);},{passive:true});
+})();
 if(store.get("sidebar","open")==="collapsed"){document.body.classList.add("side-collapsed");const t=$("side-toggle");if(t){t.textContent="›";t.title="展开侧边栏";}}
 
 // ---- 导航 ----
@@ -587,17 +612,25 @@ function selAttr(page,id){
   return `data-sel-page="${page}" data-sel-id="${String(id??"").replace(/"/g,"&quot;")}"`;
 }
 function selRowCls(page,id){return SEL_PAGES[page].set().has(id)?' class="sel"':"";}
-// 卡片正文要能拖选复制文字：拖完鼠标抬起会补一个 click，那次 click 不该改掉选中状态
+// 卡片正文要能拖选复制文字：拖完鼠标抬起会补一个 click，那次 click 不该改掉选中状态。
+// 但带 Ctrl/Shift 的点击是「命令」，浏览器顺手做的文字扩展选中不算拖选（见 clearTextSel）。
 function textDragged(page,e){
+  if(e.shiftKey||e.ctrlKey||e.metaKey)return false;
   if(page==="library")return (e.detail||1)>1;   // 表格/平铺卡没有可拖的正文，双击留给「打开」
   const g=window.getSelection&&window.getSelection();
   if(!g||g.isCollapsed||!g.rangeCount)return false;
   const el=e.target.closest?e.target.closest("[data-sel-page][data-sel-id]"):null;
   return !!(el&&el.contains(g.anchorNode)&&el.contains(g.focusNode));
 }
-function selClick(page,id,e){
+function clearTextSel(){
+  const g=window.getSelection&&window.getSelection();
+  if(g&&!g.isCollapsed)g.removeAllRanges();
+}
+function selClick(page,id,e,force){
   const pg=SEL_PAGES[page];if(!pg)return;
-  if(textDragged(page,e))return;
+  // force：点在行自己的勾选框上，那是明确的「切换」意图，不算拖选尾巴。
+  // 被当成拖选而跳过时也要 sync 一次，否则浏览器已经翻过去的勾选框会和高亮不一致。
+  if(!force&&textDragged(page,e)){pg.sync();return;}
   const set=pg.set(),order=pg.order(),ctrl=e.ctrlKey||e.metaKey;
   if(e.shiftKey&&order.includes(id)){
     if(selAnchor&&order.includes(selAnchor)){
@@ -608,7 +641,13 @@ function selClick(page,id,e){
   }else if(ctrl){
     if(set.has(id))set.delete(id);else set.add(id);
     selAnchor=id;
-  }else{set.clear();set.add(id);selAnchor=id;}
+  }else{
+    // 只选中了它自己时，再点一下=取消（不然只能去点空白或按 Esc，很别扭）；
+    // 多选状态下普通单击仍然按资源管理器的习惯「收起成这一个」。
+    if(set.size===1&&set.has(id)){set.clear();selAnchor=null;clearTextSel();}
+    else{set.clear();set.add(id);selAnchor=id;}
+  }
+  if(e.shiftKey)clearTextSel();   // 兜底：万一浏览器还是扩展了文字选中
   pg.sync();
 }
 function setAllSel(page,on){const pg=SEL_PAGES[page];pg.set().clear();if(on)pg.order().forEach(x=>pg.set().add(x));selAnchor=null;pg.sync();}
@@ -629,12 +668,27 @@ function batchLabels(page){
   if(sm)sm.textContent=n?`🤖 摘要选中 ${n} 篇`:"🤖 摘要当页";
 }
 function syncSelDom(page){
-  const set=SEL_PAGES[page].set();
-  document.querySelectorAll(`[data-sel-page="${page}"][data-sel-id]`).forEach(el=>{
+  const pg=SEL_PAGES[page],box=$(pg.box);
+  pruneSel(page);
+  const set=pg.set();
+  (box||document).querySelectorAll(`[data-sel-page="${page}"][data-sel-id]`).forEach(el=>{
     const on=set.has(el.dataset.selId);
     el.classList.toggle("sel",on);
     el.querySelectorAll("input[type=checkbox][data-sel-own]").forEach(cb=>cb.checked=on);
   });
+  // 表头那个「全选」框也要跟着真实状态走，否则 Ctrl+A 之后它还是空的
+  const all=box&&box.querySelector("[data-sel-all]");
+  if(all){const order=pg.order();all.checked=order.length>0&&order.every(x=>set.has(x));}
+}
+// 翻页/换筛选之后，看不见的选中项必须从集合里剔掉：
+// 不然「已选 3 项」还在，而批量移除/删除会打在你完全看不见的条目上。
+function pruneSel(page){
+  const pg=SEL_PAGES[page],set=pg.set();
+  if(!set.size)return;
+  const keep=new Set(pg.order());
+  let changed=false;
+  set.forEach(x=>{if(!keep.has(x)){set.delete(x);changed=true;}});
+  if(changed&&(!selAnchor||!keep.has(selAnchor)))selAnchor=null;
 }
 function syncSelHome(){
   syncSelDom("home");
@@ -689,21 +743,39 @@ function bindSel(){
     if(!el)return;
     el.addEventListener("mousedown",e=>{
       if(e.button!==0)return;
+      const row=e.target.closest&&e.target.closest("[data-sel-page][data-sel-id]");
+      if(row&&row.dataset.selPage===page&&(e.shiftKey||e.ctrlKey||e.metaKey)){
+        // 浏览器默认会把 Ctrl/Shift+点击当成「从上次位置扩展文字选中」，
+        // 一下选整片正文（像要复制一样）。按下时挡掉，选中逻辑交给 click。
+        // 这里放在 SEL_IGNORE 判断之前：点到卡片里的按钮上也不该顺手选文字。
+        e.preventDefault();
+        if(e.shiftKey)clearTextSel();
+      }
       if(e.target.closest&&e.target.closest(SEL_IGNORE))return;
-      if(!(e.target.closest&&e.target.closest("[data-sel-page][data-sel-id]")))clearSel(page);
+      if(!row)clearSel(page);
     });
     el.addEventListener("click",e=>{
       if(e.button!==0)return;
       const row=e.target.closest&&e.target.closest("[data-sel-page][data-sel-id]");
       if(!row||row.dataset.selPage!==page)return;
       if(e.target.closest&&e.target.closest(SEL_IGNORE))return;
-      selClick(page,row.dataset.selId,e);
+      selClick(page,row.dataset.selId,e,!!(e.target.closest&&e.target.closest("input[data-sel-own]")));
     });
   });
   document.addEventListener("keydown",e=>{
-    if(!(current in SEL_PAGES))return;
     const t=e.target,tag=(t&&t.tagName)||"";
-    if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(t&&t.isContentEditable))return;
+    const typing=tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(t&&t.isContentEditable);
+    // Esc 先关右键菜单（和 Windows 一样），没有菜单时才去清选中
+    const cm=$("ctxmenu");
+    if(e.key==="Escape"&&cm&&cm.style.display==="block"){cm.style.display="none";return;}
+    // Ctrl+F 或 / → 聚焦当前页的搜索框。必须在「正在输入」判断之前放行、
+    // 但在输入框里让开，否则搜「cs/03010」这种带斜杠的关键词就永远打不进去。
+    if(!typing&&(e.key==="/"||(e.key==="f"&&(e.ctrlKey||e.metaKey)))&&!e.altKey){
+      const box=current==="library"?$("lib-q"):(current==="scholar"?$("sch-q"):null);
+      if(box){e.preventDefault();box.focus();box.select();return;}
+    }
+    if(!(current in SEL_PAGES))return;
+    if(typing)return;
     // 焦点还停在按钮上时（刚点过「收藏」），Enter/空格归那个按钮
     if(tag==="BUTTON"&&(e.key==="Enter"||e.key===" "))return;
     const pg=SEL_PAGES[current],order=pg.order(),i=anchorIndex(current);
@@ -767,21 +839,35 @@ async function loadHome(){
   homeItems=pageItems;
   $("st-filtered").textContent=total;
   $("st-filtered-label").textContent=homeScope?"已归档条数":"当前筛选";
+  snapshotPanels();          // 重绘前把打开的面板/未保存的笔记文字存下来
   $("home-list").innerHTML=pageItems.length?pageItems.map(p=>{
     // 本轮同步新入库的：闪烁动画只放一次（避免每次刷新重复闪），
     // 但「刚抓取」标记在整个同步期间都保留，刷新多少次都能一眼看出哪些是新的
     const isNew=liveNewIds.has(p.arxiv_id);
     const flash=isNew&&!liveRendered.has(p.arxiv_id);
     if(flash)liveRendered.add(p.arxiv_id);
-    return pCard(p,flash,isNew);
+    return pCard(p,flash,isNew,"home");
   }).join(""):(homeScope?'<div class="empty">还没有归档的论文<br><span style="font-size:12px">太久没被收藏/下载/标注的论文会自动收到这里（保留天数在设置里改）</span></div>'
                        :'<div class="empty">暂无论文，点右上角「立即同步」抓取</div>');
   renderPager("home-pager",total,tp,"homeGo");
+  restorePanels();
   syncSelHome();
 }catch(e){if(my===homeSeq)toast("加载失败："+errText(e));}}
 function homeGo(p){homePage=p;loadHome();}
 function toggleAllHome(cb){setAllSel("home",cb.checked);}
-async function batchRemoveHome(){if(!homeChecked.size)return;if(!confirm(`确定将选中的 ${homeChecked.size} 篇移入垃圾桶？`))return;try{await Promise.all([...homeChecked].map(id=>api("set_status")(id,"trash")));toast(`已移除 ${homeChecked.size} 篇`);clearSel("home");loadHome();refreshStats();}catch(e){toast("移除失败："+errText(e));}}
+// 批量改状态（卡片右键菜单、批量按钮共用一套，确认文案由调用方给）
+async function batchStatus(ids,st,confirmMsg,doneMsg){
+  ids=[...new Set(ids)].filter(id=>id&&!String(id).startsWith("scholar:"));
+  if(!ids.length)return;
+  if(confirmMsg&&!confirm(confirmMsg.replace("{n}",ids.length)))return;
+  try{
+    await Promise.all(ids.map(id=>api("set_status")(id,st)));
+    toast(doneMsg.replace("{n}",ids.length));
+    if(current in SEL_PAGES)clearSel(current);
+    refreshAll();
+  }catch(e){toast("操作失败："+errText(e));}
+}
+async function batchRemoveHome(){if(!homeChecked.size)return;await batchStatus([...homeChecked],"trash",`确定将选中的 {n} 篇移入垃圾桶？`,"已移除 {n} 篇");}
 
 function hexRgb(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
 function scoreColor(s){
@@ -820,9 +906,18 @@ function toggleAuthors(el,cnt){
   el.textContent=collapsed?"收起 ▴":`等 ${cnt} 位作者 ▾`;
 }
 
-function pCard(p,fresh,isNew){
+// 卡片内联面板的 DOM id 必须带「渲染进哪个列表」的前缀。同一篇论文可以同时
+// 出现在首页列表和收藏网格里，而 getElementById 只认文档里的第一个——以前在
+// 收藏里点「🏷️ 标签笔记 / 🔎 相似论文」，内容其实写进了首页那张看不见的卡片。
+function panelOf(prefix,key){return document.getElementById(prefix+"-"+key);}
+function arxOf(key){const i=String(key).indexOf("@");return i<0?String(key):String(key).slice(i+1);}
+
+function pCard(p,fresh,isNew,page){
   const isLocal=!!(p.arxiv_id&&p.arxiv_id.startsWith("local:"));
-  const selPage=(current==="home"||current==="starred")?current:"";  // 相似论文弹窗复用此卡，不参与选择
+  // 能不能点选由「渲染进哪个列表」决定，不能看当前页：同步增量、下载完成这类
+  // 后台刷新会在用户停在别的 tab 时重渲染首页，那时按当前页判断会把卡片渲染成
+  // 不可选，切回来就点不动了。
+  const selPage=(page==="home"||page==="starred")?page:"";
   const isSel=selPage?SEL_PAGES[selPage].set().has(p.arxiv_id):false;
   const selAttrs=selPage?selAttr(selPage,p.arxiv_id):"";
   const cats=(p.categories||"").split(",").filter(Boolean).map(c=>`<span class="chip">${esc(dispCat(c))}</span>`).join("");
@@ -831,31 +926,81 @@ function pCard(p,fresh,isNew){
   const starBtn=p.status==="starred"?`<button class="btn small amber" onclick="setStatus('${p.arxiv_id}','new')">★ 收藏</button>`:`<button class="btn small ghost" onclick="setStatus('${p.arxiv_id}','starred')">☆ 收藏</button>`;
   const dlBtn=p.local_path?`<button class="btn small green" onclick="api('open_pdf')('${p.arxiv_id}')">📖 PDF</button>`:(!isLocal?`<button class="btn small" onclick="dl('${p.arxiv_id}',this)">⬇️ 下载</button>`:"");
   const absLong=(p.abstract||"").length>300||(p.abstract_zh||"").length>220;
-  return `<div class="card${fresh?" fresh":""}${isSel?" sel":""}" id="card-${p.arxiv_id}" ${selAttrs} data-local="${p.local_path?1:0}" data-arx="${isLocal?0:1}" data-st="${esc(p.status||"")}" ondblclick="openWith('default','${p.arxiv_id}')" oncontextmenu="cardMore(event,'${p.arxiv_id}')">
+  const absOpen=expandedAbs.has(p.arxiv_id),absCls=absOpen?" open":"";
+  const key=(page||"home")+"@"+p.arxiv_id;
+  return `<div class="card${fresh?" fresh":""}${isSel?" sel":""}" id="card-${key}" ${selAttrs} data-local="${p.local_path?1:0}" data-arx="${isLocal?0:1}" data-st="${esc(p.status||"")}" ondblclick="openWith('default','${p.arxiv_id}')" oncontextmenu="cardMore(event,'${p.arxiv_id}')">
     ${!isLocal?`<button class="card-x" title="移入垃圾桶" onclick="trashArxiv('${p.arxiv_id}')">✕</button>`:""}
     <div class="trow">${selPage?`<input type="checkbox" class="hchk" data-sel-own ${isSel?"checked":""}>`:""}<span class="pdate">${esc(p.published||"")}</span><h3>${esc(p.title)}</h3>${p.score?`<span class="score" style="color:${scoreColor(p.score)}">${p.score}分</span>`:""}${!isLocal?`<span class="arxid" title="点击复制 arXiv ID" onclick="copyText('${esc(p.arxiv_id)}')">arXiv:${esc(p.arxiv_id)}</span>`:""}</div>
     ${p.title_zh?`<div class="zhtitle">${esc(p.title_zh)}</div>`:""}
     <div class="chips">${cats}<span class="badge ${isLocal?"local":"src"}">${src}</span>${p.upvotes?`<span class="badge">👍 ${p.upvotes}</span>`:""}${p.citations?`<span class="badge">被引 ${p.citations}</span>`:""}${p.status==="archived"?`<span class="badge" style="background:var(--chip);color:var(--chiptext)">已归档</span>`:""}${isNew?`<span class="badge" style="background:var(--accent);color:#fff">刚抓取</span>`:""}</div>
-    ${p.abstract?`<div class="abstext">${esc(p.abstract)}</div>`:""}
-    ${p.abstract_zh?`<div class="abszh">${esc(p.abstract_zh)}</div>`:""}
-    ${absLong?`<span class="abstoggle" onclick="toggleAbs(this,'${p.arxiv_id}')">展开全文 ▾</span>`:""}
+    ${p.abstract?`<div class="abstext${absCls}">${esc(p.abstract)}</div>`:""}
+    ${p.abstract_zh?`<div class="abszh${absCls}">${esc(p.abstract_zh)}</div>`:""}
+    ${absLong?`<span class="abstoggle" onclick="toggleAbs(this,'${jsq(key)}')">${absOpen?"收起 ▴":"展开全文 ▾"}</span>`:""}
     ${authorMeta(p.authors)}
     ${tags?`<div class="chips">${tags}</div>`:""}
     <div class="actions">
       ${starBtn}${dlBtn}
-      <button class="btn small ghost" onclick="toggleTagNote('${p.arxiv_id}')">🏷️ 标签笔记</button>
+      <button class="btn small ghost" onclick="toggleTagNote('${jsq(key)}')">🏷️ 标签笔记</button>
       <button class="btn small ghost" onclick="cardMore(event,'${p.arxiv_id}')">⋯ 更多</button>
     </div>
-    <div class="ai-result" id="ai-${p.arxiv_id}"></div>
-    <div class="tag-note" id="tn-${p.arxiv_id}" style="display:none"></div>
+    <div class="ai-result" id="ai-${key}"></div>
+    <div class="tag-note" id="tn-${key}" style="display:none"></div>
   </div>`;
 }
+// 摘要展开状态与内联面板（标签笔记 / 相似论文）要活过列表重绘：
+// 同步期间每 ~600ms 就 innerHTML 重画一次，不暂存的话用户正看的笔记面板、
+// 甚至还没点「保存」的笔记文字会被直接吞掉。
+let expandedAbs=new Set(),panelHtml={};
+function snapshotPanels(){
+  document.querySelectorAll(".tag-note,.ai-result").forEach(el=>{
+    if(!el.id||!el.innerHTML.trim())return;
+    const ta=el.querySelector("textarea");
+    panelHtml[el.id]={html:el.innerHTML,show:el.style.display!=="none",note:ta?ta.value:null};
+  });
+}
+function restorePanels(){
+  Object.keys(panelHtml).forEach(k=>{
+    const el=$(k);
+    if(!el){delete panelHtml[k];return;}          // 这条论文不在当前页了，别攒着
+    const s=panelHtml[k];
+    el.innerHTML=s.html;
+    if(s.note!=null){const ta=el.querySelector("textarea");if(ta)ta.value=s.note;}
+    el.style.display=s.show?"block":"none";
+    if(/^tn-/.test(k))el.dataset.loaded="1";
+  });
+}
 // 摘要默认截断 3 行，点这里展开/收起（控件本身不触发卡片选中）
-function toggleAbs(el,id){
-  const card=$("card-"+id);if(!card)return;
-  const on=card.classList.toggle("abs-open");
+function toggleAbs(el,key){
+  const card=panelOf("card",key);if(!card)return;
+  const arx=arxOf(key);            // 展开状态按论文记，两个列表看到的是同一个
+  const on=!expandedAbs.has(arx);
+  if(on)expandedAbs.add(arx);else expandedAbs.delete(arx);
+  card.classList.toggle("abs-open",on);
   card.querySelectorAll(".abstext,.abszh").forEach(b=>b.classList.toggle("open",on));
   el.textContent=on?"收起 ▴":"展开全文 ▾";
+}
+// 右键落在「多选集合」里的一项时，菜单换成对这一批操作（资源管理器也是这个逻辑）
+function batchMenuItems(page,id){
+  const pg=SEL_PAGES[page];if(!pg)return [];
+  const set=pg.set();
+  if(set.size<2||!set.has(id))return [];
+  const ids=[...set],n=ids.length;
+  const arx=page==="library"
+    ?ids.map(r=>{const it=libPageItems.find(x=>x.rel===r);return (it&&it.meta&&it.meta.arxiv_id)||"";}).filter(Boolean)
+    :ids.filter(x=>!String(x).startsWith("local:"));
+  const out=[];
+  if(page==="library"){
+    out.push({t:`🗑 删除这 ${n} 个文件`,danger:true,f:()=>batchDeleteLib()});
+  }else{
+    out.push({t:`★ 收藏这 ${n} 篇`,f:()=>batchStatus(ids,"starred","",`已收藏 ${n} 篇`)});
+    out.push({t:`🗑 移入垃圾桶这 ${n} 篇`,danger:true,f:()=>batchStatus(ids,"trash",`确定将选中的 {n} 篇移入垃圾桶？`,"已移除 {n} 篇")});
+  }
+  if(arx.length){
+    out.splice(page==="library"?0:1,0,
+      {t:`🌐 翻译这 ${n} 篇`,f:()=>startBatch("batch_translate",arx,`正在翻译 ${arx.length} 篇…`,"这些都已翻译过了")},
+      {t:`🤖 AI 摘要这 ${n} 篇`,f:()=>startBatch("batch_summarize",arx,`正在生成摘要 ${arx.length} 篇…`,"这些都已有摘要")});
+  }
+  return out;
 }
 // 卡片右键 / 「⋯ 更多」菜单：把不常用的操作收起来，卡片底部只留 4 个主操作。
 // 和资源管理器一样：右键一个没选中的条目时，先把它单独选中。
@@ -864,42 +1009,57 @@ function cardMore(e,id){
   e.preventDefault();
   const page=card.dataset.selPage;
   if(page&&page===current&&!SEL_PAGES[page].set().has(id))selClick(page,id,e);
+  let x=e.clientX,y=e.clientY;
+  const many=page&&page===current?batchMenuItems(page,id):[];
+  if(many.length){
+    if(!x&&!y){const r=e.target.getBoundingClientRect();x=r.left;y=r.bottom+4;}
+    showCtx(x,y,[],many);return;
+  }
   const hasPdf=card.dataset.local==="1",isArx=card.dataset.arx==="1";
   const starred=card.querySelector(".actions .amber");
   const opens=hasPdf?[{app:"wps",label:"WPS",target:id},{app:"chrome",label:"浏览器",target:id},{app:"xlj",label:"小绿鲸",target:id}]:[];
   const items=[];
   if(card.dataset.st==="archived")items.push({t:"↩ 放回推荐池",f:()=>setStatus(id,"new")});
-  if(isArx){items.push({t:"🔗 在 arXiv 页面打开",f:()=>api("open_abs")(id)});items.push({t:"🌐 翻译标题摘要",f:()=>translateOne(id)});items.push({t:"🤖 生成 AI 摘要",f:()=>summaryOne(id)});items.push({t:"🔎 相似论文",f:()=>showSimilar(id)});}
+  if(isArx){items.push({t:"🔗 在 arXiv 页面打开",f:()=>api("open_abs")(id)});items.push({t:"🌐 翻译标题摘要",f:()=>translateOne(id)});items.push({t:"🤖 生成 AI 摘要",f:()=>summaryOne(id)});items.push({t:"🔎 相似论文",f:()=>showSimilar((page||current)+"@"+id)});}
   items.push({t:"📋 复制 BibTeX",f:()=>bibtexCopy(id)});
   items.push(starred?{t:"☆ 取消收藏",f:()=>setStatus(id,"new")}:{t:"★ 收藏",f:()=>setStatus(id,"starred")});
   if(isArx)items.push({t:"🗑 移入垃圾桶",danger:true,f:()=>trashArxiv(id)});
-  let x=e.clientX,y=e.clientY;
   if(!x&&!y){const r=e.target.getBoundingClientRect();x=r.left;y=r.bottom+4;}
   showCtx(x,y,opens,items);
 }
 let allTagNames=[];
-async function toggleTagNote(id){
-  const tn=$("tn-"+id);
+async function toggleTagNote(key){
+  let tn=panelOf("tn",key);
   if(!tn)return;
+  const id=arxOf(key);
   if(tn.style.display!=="none"){tn.style.display="none";return;}
   if(tn.dataset.loaded){tn.style.display="block";return;}
   tn.dataset.loaded="1";
   tn.innerHTML='<div class="aiout"><span class="spin"></span> 加载中…</div>';
   tn.style.display="block";
-  const p=await api("get_paper")(id);
+  let p=null;
+  try{p=await api("get_paper")(id);}catch(e){p=null;}
+  if(!p){
+    // 记录可能刚在别处被删掉；不接住的话这里会永远停在「加载中…」
+    tn.dataset.loaded="";tn.innerHTML="";tn.style.display="none";
+    toast("这条论文已经不在库里了");return;
+  }
   try{allTagNames=(await api("get_all_tags")()).map(t=>t.name);}catch(e){allTagNames=[];}
+  // 上面几个 await 期间，同步增量的重绘可能已经把这张卡片换成了新节点。
+  // 不重新取一次的话内容会写进游离节点，表现为「点了标签笔记但没开」。
+  tn=panelOf("tn",key)||tn;
   const tags=parseTags(p.tags);
-  const quickTags=allTagNames.filter(t=>!tags.includes(t)).slice(0,12).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)};cursor:pointer" onclick="quickAddTag('${esc(id)}','${esc(t)}')">${esc(t)} ＋</span>`).join("");
+  const quickTags=allTagNames.filter(t=>!tags.includes(t)).slice(0,12).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)};cursor:pointer" onclick="quickAddTag('${jsq(key)}','${jsq(t)}')">${esc(t)} ＋</span>`).join("");
   tn.innerHTML=`
     <div><h4 style="font-size:12px;color:var(--muted);margin-bottom:6px">标签</h4>
-      <div class="chips">${tags.map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}">${esc(t)} <b style="cursor:pointer" onclick="delTag('${esc(id)}','${esc(t)}')">×</b></span>`).join("")}
-        <input type="text" placeholder="+ 标签回车" style="padding:5px 9px;border:1px solid var(--border);border-radius:20px;font-size:12px;width:110px;background:var(--input);color:var(--text)" onkeydown="addTag(event,'${esc(id)}')">
+      <div class="chips">${tags.map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}">${esc(t)} <b style="cursor:pointer" onclick="delTag('${jsq(key)}','${jsq(t)}')">×</b></span>`).join("")}
+        <input type="text" placeholder="+ 标签回车" style="padding:5px 9px;border:1px solid var(--border);border-radius:20px;font-size:12px;width:110px;background:var(--input);color:var(--text)" onkeydown="addTag(event,'${jsq(key)}')">
       </div>
       ${quickTags?`<div class="chips" style="margin-top:6px">${quickTags}</div>`:""}
     </div>
     <div style="margin-top:12px"><h4 style="font-size:12px;color:var(--muted);margin-bottom:6px">笔记</h4>
-      <textarea id="note-${id}" placeholder="记录想法…">${esc(p.note||"")}</textarea>
-      <div style="text-align:right;margin-top:6px"><button class="btn small" onclick="saveNote('${id}')">💾 保存笔记</button></div>
+      <textarea id="note-${key}" placeholder="记录想法…">${esc(p.note||"")}</textarea>
+      <div style="text-align:right;margin-top:6px"><button class="btn small" onclick="saveNote('${jsq(key)}')">💾 保存笔记</button></div>
     </div>`;
 }
 let openSim={};
@@ -907,7 +1067,7 @@ let openSim={};
 // 所以这里必须自己收掉进度条，否则它会永远挂着（曾经就是这样的）。
 function startBatch(m,ids,preparing,emptyMsg){
   batchCancelled=false;
-  batchKind=m==="batch_translate"?"translate":"summarize";
+  batchKind=m==="batch_translate"?"translate":"summarize";barOwner="batch";
   showProgress(preparing,1,true);
   api(m)(ids).then(r=>{if(r&&r.started===false){batchKind="";batchCancelled=false;hideProgress();toast(r.msg||emptyMsg);}})
     .catch(e=>{batchKind="";hideProgress();toast("启动失败："+errText(e));});
@@ -916,16 +1076,38 @@ function startBatch(m,ids,preparing,emptyMsg){
 // 点一下要干等几十秒进度条才动，还顺带多翻了 8 篇（限速时更是整批卡住）。
 function translateOne(id){startBatch("batch_translate",[id],"正在翻译这篇…","这篇已翻译过了");}
 function summaryOne(id){startBatch("batch_summarize",[id],"正在生成这篇的 AI 摘要…","这篇已有摘要");}
-function showSimilar(id){openSim[id]=true;$("ai-"+id).innerHTML='<div class="aiout"><span class="spin"></span> 检索中…</div>';api("similar")(id,8).then(r=>{const v=(r||[]).filter(s=>s.arxiv_id);$("ai-"+id).innerHTML=v.length?`<h4 style="font-size:12px;color:var(--muted);margin-bottom:4px">相似论文</h4>`+v.map(s=>`<div class="sim-card" onclick="api('open_abs')('${s.arxiv_id}')"><span class="badge src" style="font-size:10px;padding:1px 7px">相关</span><div class="sim-title">${esc(s.title)}</div>${s.title_zh?`<div style="color:var(--accent);font-size:12px;margin-top:2px">${esc(s.title_zh)}</div>`:""}<div class="meta" style="margin-top:4px">${esc(s.authors||"")}${s.published?" · "+esc(s.published):""}</div>${s.abstract?`<div class="sim-abs">${esc(s.abstract)}</div>`:""}${s.abstract_zh?`<div class="sim-abs" style="color:var(--accent)">${esc(s.abstract_zh)}</div>`:""}</div>`).join(""):"<div class='aiout'>暂无相似论文</div>";}).catch(e=>{$("ai-"+id).innerHTML="";toast("失败："+errText(e));});}
+function showSimilar(key){let box=panelOf("ai",key);if(!box){delete openSim[key];return;}openSim[key]=true;box.innerHTML='<div class="aiout"><span class="spin"></span> 检索中…</div>';api("similar")(arxOf(key),8).then(r=>{const v=(r||[]).filter(s=>s.arxiv_id);box=panelOf("ai",key)||box;box.innerHTML=v.length?`<h4 style="font-size:12px;color:var(--muted);margin-bottom:4px">相似论文</h4>`+v.map(s=>`<div class="sim-card" onclick="api('open_abs')('${s.arxiv_id}')"><span class="badge src" style="font-size:10px;padding:1px 7px">相关</span><div class="sim-title">${esc(s.title)}</div>${s.title_zh?`<div style="color:var(--accent);font-size:12px;margin-top:2px">${esc(s.title_zh)}</div>`:""}<div class="meta" style="margin-top:4px">${esc(s.authors||"")}${s.published?" · "+esc(s.published):""}</div>${s.abstract?`<div class="sim-abs">${esc(s.abstract)}</div>`:""}${s.abstract_zh?`<div class="sim-abs" style="color:var(--accent)">${esc(s.abstract_zh)}</div>`:""}</div>`).join(""):"<div class='aiout'>暂无相似论文</div>";}).catch(e=>{box.innerHTML="";toast("失败："+errText(e));});}
 
 async function setStatus(id,st){try{await api("set_status")(id,st);refreshAll();}catch(e){toast("操作失败："+errText(e));}}
 async function dl(id,btn){btn.disabled=true;btn.textContent="下载中…";try{const tid=await api("download")(id);if(tid){toast("已加入下载队列，可在「下载」tab 查看进度");}else{toast("下载失败");btn.textContent="⬇️ 重试";btn.disabled=false;}}catch(e){toast("下载出错："+errText(e));btn.textContent="⬇️ 重试";btn.disabled=false;}}
-async function addTag(e,id){if(e.key!=="Enter")return;const v=e.target.value.trim();if(!v)return;const p=await api("get_paper")(id);const tags=parseTags(p.tags);if(!tags.includes(v))tags.push(v);await api("set_tags")(id,tags);if(!allTagNames.includes(v))allTagNames.push(v);loadTags();reloadTagNote(id);}
-async function quickAddTag(id,t){const p=await api("get_paper")(id);const tags=parseTags(p.tags);if(!tags.includes(t))tags.push(t);await api("set_tags")(id,tags);loadTags();reloadTagNote(id);}
-async function delTag(id,t){const p=await api("get_paper")(id);const tags=parseTags(p.tags).filter(x=>x!==t);await api("set_tags")(id,tags);loadTags();reloadTagNote(id);}
-function reloadTagNote(id){const tn=$("tn-"+id);if(tn){tn.dataset.loaded="";tn.style.display="none";toggleTagNote(id);}}
-async function saveNote(id){const n=$("note-"+id).value;await api("set_note")(id,n);toast("笔记已保存");}
-function filterTag(t){resetSel("home");switchView("home");$("home-tag").value=t;homePage=1;loadHome();}
+// 标签/笔记的写入都会真失败（记录被删、库锁），静默的话用户以为存好了
+async function editTags(key,mutate,okMsg){
+  const id=arxOf(key);
+  try{
+    const p=await api("get_paper")(id);
+    if(!p){toast("这条论文已经不在库里了");return;}
+    const tags=mutate(parseTags(p.tags));
+    const r=await api("set_tags")(id,tags);
+    if(r===false)toast("标签没保存成功（详见日志）");
+    else{if(okMsg)toast(okMsg);loadTags();reloadTagNote(key);}
+  }catch(e){toast("标签操作失败："+errText(e));}
+}
+async function addTag(e,id){if(e.key!=="Enter")return;const v=e.target.value.trim();if(!v)return;await editTags(id,tags=>{if(!tags.includes(v))tags.push(v);return tags;});if(!allTagNames.includes(v))allTagNames.push(v);e.target.value="";}
+async function quickAddTag(id,t){await editTags(id,tags=>{if(!tags.includes(t))tags.push(t);return tags;});}
+async function delTag(id,t){await editTags(id,tags=>tags.filter(x=>x!==t));}
+function reloadTagNote(key){const tn=panelOf("tn",key);if(tn){tn.dataset.loaded="";tn.style.display="none";toggleTagNote(key);}}
+async function saveNote(key){
+  const el=$("note-"+key);if(!el)return;
+  try{const r=await api("set_note")(arxOf(key),el.value);toast(r===false?"笔记没保存成功（详见日志）":"笔记已保存");}
+  catch(e){toast("保存笔记失败："+errText(e));}
+}
+function filterTag(t){
+  resetSel("home");switchView("home");
+  const sel=$("home-tag");
+  // 刚新建的标签可能还没进下拉框，直接赋值会静默失效（筛不出来也不报错）
+  if(![...sel.options].some(o=>o.value===t))sel.insertAdjacentHTML("beforeend",`<option value="${esc(t)}">${esc(t)}</option>`);
+  sel.value=t;homePage=1;loadHome();
+}
 
 // ---- 谷歌学术（期刊/会议论文，CCF 标注） ----
 let schPage=0,schQuery="";
@@ -1061,7 +1243,7 @@ async function scholarAutoSearch(){
 
 // ---- 论文库 ----
 let libCwd="",libData={dirs:[],files:[]},libPage=1,libPageSize=10,libView=store.get("libview","list"),libChecked=new Set(),libPageItems=[];
-function jsq(s){return String(s??"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");}
+function jsq(s){return String(s??"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;").replace(/\r?\n/g," ");}
 async function loadLibrary(){try{libData=await api("browse_library")(libCwd);libPage=1;renderLib();}catch(e){toast("浏览失败："+errText(e));}}
 function setLibView(el){document.querySelectorAll("#lib-view button").forEach(b=>b.classList.remove("on"));el.classList.add("on");libView=el.dataset.v;store.set("libview",libView);renderLib();}
 function renderLibBreadcrumb(){let c='<span class="crumb" onclick="gotoLib(\'\')">📚 论文库</span>';if(libData.current){const parts=libData.current.split("/");let acc="";parts.forEach(p=>{acc=acc?acc+"/"+p:p;c+=`<span style="color:var(--muted)"> / </span><span class="crumb" onclick="gotoLib('${jsq(acc)}')">${esc(p)}</span>`;});}$("lib-breadcrumb").innerHTML=c;}
@@ -1074,6 +1256,8 @@ function renderLib(){renderLibBreadcrumb();renderLibDirs();
   const pageItems=items.slice((libPage-1)*libPageSize,libPage*libPageSize);
   libPageItems=pageItems;
   const body=$("lib-body");
+  const allOn=pageItems.length>0&&pageItems.every(f=>libChecked.has(f.rel));
+  const chk=`<input type="checkbox" data-sel-all ${allOn?"checked":""} onchange="toggleAllLib(this)">`;
   // 空目录以前只有一行光秃秃的表头，看不出是「没文件」还是「没加载出来」
   const emptyMsg=!pageItems.length&&!(libData.dirs||[]).length
     ?(($("lib-q").value||"").trim()
@@ -1082,8 +1266,8 @@ function renderLib(){renderLibBreadcrumb();renderLibDirs();
     :"";
   if(emptyMsg){body.innerHTML=`<div class="empty">${emptyMsg}</div>`;}
   else if(libView==="grid"){body.innerHTML=`<div class="gridwrap">${pageItems.map(libGridCard).join("")}</div>`;}
-  else if(libView==="list"){body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllLib(this)"></th><th>标题</th><th>备注</th><th>分类</th><th>时间</th><th>重要度</th><th>操作</th></tr></thead><tbody>${pageItems.map(libListRow).join("")}</tbody></table></div>`;}
-  else{body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllLib(this)"></th><th>标题</th><th>译文标题</th><th>条目</th><th>附件</th><th>标签</th><th>操作</th></tr></thead><tbody>${pageItems.map(libZoteroRow).join("")}</tbody></table></div>`;}
+  else if(libView==="list"){body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px">${chk}</th><th>标题</th><th>备注</th><th>分类</th><th>时间</th><th>重要度</th><th>操作</th></tr></thead><tbody>${pageItems.map(libListRow).join("")}</tbody></table></div>`;}
+  else{body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px">${chk}</th><th>标题</th><th>译文标题</th><th>条目</th><th>附件</th><th>标签</th><th>操作</th></tr></thead><tbody>${pageItems.map(libZoteroRow).join("")}</tbody></table></div>`;}
   syncSelLib();
   renderPager("lib-pager",items.length,tp,"libGo");}
 function renderLibDirs(){$("lib-dirs").innerHTML=(libData.dirs||[]).map(x=>`<div class="folder" onclick="gotoLib('${jsq(x.rel)}')">📁 ${esc(x.name)}</div>`).join("");}
@@ -1102,9 +1286,12 @@ function libOpenBtns(rel){return `<span class="oplink" onclick="openWith('wps','
 function toggleAllLib(cb){setAllSel("library",cb.checked);}
 function batchDeleteLib(){if(!libChecked.size)return;if(!confirm(`确定删除选中的 ${libChecked.size} 个文件？此操作不可恢复。`))return;api("delete_files")([...libChecked]).then(r=>{toast(`已删除 ${r.deleted} 个`);clearSel("library");loadLibrary();});}
 function libGo(p){libPage=p;renderLib();}
-function libCtx(e,rel){e.preventDefault();showCtx(e.clientX,e.clientY,
-  [{app:"wps",label:"WPS 打开",target:rel},{app:"chrome",label:"浏览器打开",target:rel},{app:"xlj",label:"小绿鲸打开",target:rel}],
-  [{t:"重命名",f:()=>renameLib(rel)},{t:"删除",f:()=>{if(confirm("确定删除该文件？此操作不可恢复。"))api("delete_files")([rel]).then(()=>loadLibrary());},danger:true}]);}
+function libCtx(e,rel){e.preventDefault();
+  const many=batchMenuItems("library",rel);
+  const one=[{t:"重命名",f:()=>renameLib(rel)},{t:"删除",f:()=>{if(confirm("确定删除该文件？此操作不可恢复。"))api("delete_files")([rel]).then(()=>loadLibrary());},danger:true}];
+  showCtx(e.clientX,e.clientY,
+  many.length?[]:[{app:"wps",label:"WPS 打开",target:rel},{app:"chrome",label:"浏览器打开",target:rel},{app:"xlj",label:"小绿鲸打开",target:rel}],
+  many.length?many.concat([{t:"重命名这一篇",f:()=>renameLib(rel)}]):one);}
 async function renameLib(rel){const n=prompt("新文件名（含 .pdf）：");if(!n)return;const r=await api("rename_file")(rel,n);if(r.ok){toast("已重命名");loadLibrary();}else toast(r.msg||"重命名失败");}
 async function newFolder(){const name=prompt("文件夹名称：");if(!name)return;const r=await api("create_folder")(libCwd,name);if(r.ok){toast("已创建");loadLibrary();}else toast(r.msg||"失败");}
 
@@ -1116,16 +1303,20 @@ let starData=[];
 function setStarView(el){document.querySelectorAll("#star-view button").forEach(b=>b.classList.remove("on"));el.classList.add("on");starView=el.dataset.v;store.set("starview",starView);renderStar();}
 function starSort(list){const mode=$("star-sort").value;return [...list].sort((a,b)=>{if(mode==="alpha")return (a.title||"").localeCompare(b.title||"");if(mode==="date")return String(b.published||"").localeCompare(String(a.published||""));return (b.score||0)-(a.score||0);});}
 function renderStar(){const items=starSort(starData);starItems=items;const body=$("star-body");selBar("starred");
-  if(starView==="grid"){body.innerHTML=items.length?items.map(p=>pCard(p)).join(""):'<div class="empty">暂无收藏</div>';}
-  else if(starView==="list"){body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllStar(this)"></th><th>标题</th><th>摘要</th><th>时间</th><th>重要度</th><th>操作</th></tr></thead><tbody>${items.map(starRow).join("")}</tbody></table></div>`;}
-  else{body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px"><input type="checkbox" onchange="toggleAllStar(this)"></th><th>标题</th><th>译文标题</th><th>附件</th><th>标签</th><th>操作</th></tr></thead><tbody>${items.map(starZRow).join("")}</tbody></table></div>`;}}
+  const allOn=items.length>0&&items.every(p=>starChecked.has(p.arxiv_id));
+  const chk=`<input type="checkbox" data-sel-all ${allOn?"checked":""} onchange="toggleAllStar(this)">`;
+  if(starView==="grid"){snapshotPanels();body.innerHTML=items.length?items.map(p=>pCard(p,false,false,"starred")).join(""):'<div class="empty">暂无收藏</div>';restorePanels();}
+  else if(starView==="list"){body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px">${chk}</th><th>标题</th><th>摘要</th><th>时间</th><th>重要度</th><th>操作</th></tr></thead><tbody>${items.map(starRow).join("")}</tbody></table></div>`;}
+  else{body.innerHTML=`<div class="tblwrap"><table class="tbl"><thead><tr><th style="width:36px">${chk}</th><th>标题</th><th>译文标题</th><th>附件</th><th>标签</th><th>操作</th></tr></thead><tbody>${items.map(starZRow).join("")}</tbody></table></div>`;}}
 function starOps(p){return `<span class="oplink" onclick="openWith('default','${p.arxiv_id}')">打开</span><span class="oplink" onclick="bibtexCopy('${p.arxiv_id}')">BibTeX</span><span class="oplink" onclick="translateOne('${p.arxiv_id}')">翻译</span><span class="oplink" onclick="summaryOne('${p.arxiv_id}')">摘要</span><span class="oplink" onclick="starCtx(event,'${p.arxiv_id}')">⋯</span>`;}
 function starRow(p){const abs=(p.abstract||"");return `<tr${selRowCls("starred",p.arxiv_id)} ${selAttr("starred",p.arxiv_id)} ondblclick="openWith('default','${p.arxiv_id}')" oncontextmenu="starCtx(event,'${p.arxiv_id}')"><td><input type="checkbox" data-sel-own ${starChecked.has(p.arxiv_id)?"checked":""}></td><td class="ttitle">${esc(p.title)}${p.title_zh?`<div style="color:var(--accent);font-size:12px">${esc(p.title_zh)}</div>`:""}</td><td class="tdim" style="max-width:320px">${esc(abs.slice(0,140))}${abs.length>140?"…":""}</td><td class="tdim">${esc(p.published||"")}</td><td class="tdim">${p.score?p.score+"分":"-"}</td><td>${starOps(p)}</td></tr>`;}
 function starZRow(p){const tags=parseTags(p.tags).map(t=>`<span class="tag" style="background:${hashColor(t)}22;color:${hashColor(t)}">${esc(t)}</span>`).join(" ")||"-";return `<tr${selRowCls("starred",p.arxiv_id)} ${selAttr("starred",p.arxiv_id)} ondblclick="openWith('default','${p.arxiv_id}')" oncontextmenu="starCtx(event,'${p.arxiv_id}')"><td><input type="checkbox" data-sel-own ${starChecked.has(p.arxiv_id)?"checked":""}></td><td class="ttitle">${esc(p.title)}</td><td class="tdim" style="max-width:180px">${p.title_zh?esc(p.title_zh):"-"}</td><td><span class="oplink" onclick="openWith('default','${p.arxiv_id}')">查看</span></td><td style="max-width:140px">${tags}</td><td>${starOps(p)}</td></tr>`;}
 async function bibtexCopy(id){const b=await api("bibtex")(id);if(b){api("copy_to_clipboard")(b).then(ok=>toast(ok?"BibTeX 已复制":"复制失败"));}}
 function toggleAllStar(cb){setAllSel("starred",cb.checked);}
-function batchDeleteStar(){if(!starChecked.size)return;if(!confirm(`确定取消收藏选中的 ${starChecked.size} 篇？`))return;Promise.all([...starChecked].map(id=>api("set_status")(id,"new"))).then(()=>{toast("已取消收藏");clearSel("starred");loadStarred();});}
-function starCtx(e,id){e.preventDefault();showCtx(e.clientX,e.clientY,
+function batchDeleteStar(){if(!starChecked.size)return;batchStatus([...starChecked],"new",`确定取消收藏选中的 {n} 篇？`,"已取消收藏 {n} 篇");}
+function starCtx(e,id){e.preventDefault();const many=batchMenuItems("starred",id);
+  if(many.length){showCtx(e.clientX,e.clientY,[],many);return;}
+  showCtx(e.clientX,e.clientY,
   [{app:"wps",label:"WPS 打开",target:id},{app:"chrome",label:"浏览器打开",target:id},{app:"xlj",label:"小绿鲸打开",target:id}],
   [{t:"取消收藏",f:()=>api("set_status")(id,"new").then(()=>loadStarred()),danger:true}]);}
 
@@ -1180,9 +1371,19 @@ async function loadDownloads(){
 function _dlStatus(t){
   if(t.status==="done")return "✅";
   if(t.status==="failed")return "❌";
+  if(t.status==="skipped")return "⏹";
   return '<span class="spin"></span>';
 }
+// 侧栏「下载」上的角标：不在下载页时也能看到还有几条在传
+function dlBadge(){
+  const n=dlTasks.filter(t=>t.status==="downloading").length;
+  const b=$("nav-dl-badge");
+  if(!b)return;
+  b.textContent=n?String(n):"";
+  b.style.display=n?"":"none";
+}
 function renderDownloads(){
+  dlBadge();
   const box=$("downloads-list");
   if(!box)return;
   if(!dlTasks.length){box.innerHTML='<div class="empty">暂无下载任务</div>';return;}
@@ -1190,8 +1391,10 @@ function renderDownloads(){
   const finished=dlTasks.filter(t=>t.status!=="downloading");
   const dlBlock=downloading.map(t=>{
     const pct=t.progress||0;
+    // 只有还在排队的能取消；已经在传的不给假按钮
+    const cancel=(!t.started)?`<button class="dl-cancel" title="取消这条（还没开始传）" onclick="cancelDownload('${esc(t.id)}')">✕</button>`:"";
     return `<div class="dl-item">
-      <div class="dl-head">${_dlStatus(t)} <b>${esc(t.title||t.arxiv_id||"")}</b></div>
+      <div class="dl-head">${_dlStatus(t)} <b>${esc(t.title||t.arxiv_id||"")}</b>${cancel}</div>
       <div class="dl-meta">${esc(t.detail||"")}</div>
       <div class="dlbar"><div class="dlbar-fill" style="width:${pct}%"></div></div>
     </div>`;
@@ -1203,12 +1406,26 @@ function renderDownloads(){
         <div class="dl-meta">${esc(t.path||"")}</div>
       </div>`;
     }
+    if(t.status==="skipped"){
+      return `<div class="dl-item">
+        <div class="dl-head">⏹ <b>${esc(t.title||t.arxiv_id||"")}</b></div>
+        <div class="dl-meta" style="color:var(--muted)">${esc(t.detail||"已取消")}</div>
+      </div>`;
+    }
     return `<div class="dl-item failed">
       <div class="dl-head">❌ <b>${esc(t.title||t.arxiv_id||"")}</b></div>
       <div class="dl-meta" style="color:var(--red)">${esc(t.error||t.detail||"下载失败")}</div>
     </div>`;
   }).join("");
   box.innerHTML=`${dlBlock}${(downloading.length&&finished.length)?'<div class="dl-sep">已完成</div>':''}${finBlock}`;
+}
+async function cancelDownload(tid){
+  try{
+    const r=await api("skip_download")(tid);
+    if(r&&!r.ok)toast(r.msg||"取消失败");
+    else toast("已取消排队中的下载");
+    loadDownloads();
+  }catch(e){toast("取消失败："+errText(e));}
 }
 async function clearDownloadTasks(){
   try{await api("clear_download_tasks")();dlTasks=dlTasks.filter(t=>t.status==="downloading");renderDownloads();toast("已清除完成记录");}catch(e){toast("清除失败："+errText(e));}
@@ -1400,9 +1617,12 @@ function restoreScholarState(){try{const s=localStorage.getItem("arxiver_scholar
 
 // ---- 初始化 ----
 function apiReady(){try{return !!(window.pywebview&&window.pywebview.api&&typeof window.pywebview.api.get_papers==="function");}catch(e){return false;}}
+let inited=false;
 function initApp(){
+  if(inited)return;          // 兜底重试会再调几次，别把首页刷 4 遍（会吞掉用户刚点开的东西）
+  inited=true;
   api("get_categories")().then(c=>{if(c)catNames=c;}).catch(()=>{});
-  refreshStats();loadHome();loadTags();
+  refreshStats();loadHome();loadTags();loadDownloads();
 }
 function tryInit(){if(apiReady()){initApp();return true;}return false;}
 if(!tryInit()){

@@ -42,7 +42,7 @@ class Paper:
             "abstract": self.abstract,
             "authors": ", ".join(self.authors),
             "categories": ", ".join(self.categories),
-            "published": self.published,
+            "published": norm_date(self.published),
             "updated": self.updated,
             "pdf_url": self.pdf_url,
             "abs_url": self.abs_link,
@@ -51,3 +51,25 @@ class Paper:
             "source": self.source,
             "score": self.score,
         }
+
+
+def norm_date(s) -> str:
+    """把来源给的日期统一成 YYYY-MM-DD（缺的补 0）。
+
+    库里 published 全程按**字符串**比较：首页「近 N 天」、按最新排序、自动归档。
+    来源格式不统一（Semantic Scholar 常只给 "2026"，偶见 "2026-03"），而
+    "2026" < "2026-08-26" 成立，于是当年份存进去后：种子推荐抓回来当天就被
+    判成远古论文整批归档（线上实测 52/52 全中），「近 N 天」也永远筛掉它们。
+    统一在这里做——to_row 是所有数据源进库的唯一出口，比在每个客户端各修一遍可靠。
+    """
+    s = str(s or "").strip()
+    if not s:
+        return ""
+    parts = s.split("-")
+    if len(parts) == 3 and len(parts[0]) == 4:
+        return s
+    if len(parts) == 2 and len(parts[0]) == 4:      # "2026-03" -> "2026-03-01"
+        return f"{s}-01"
+    if len(parts) == 1 and len(s) == 4 and s.isdigit():
+        return f"{s}-01-01"                          # "2026" -> "2026-01-01"
+    return s

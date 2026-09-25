@@ -15,7 +15,7 @@ from __future__ import annotations
 import httpx
 
 from ..errors import log, retry
-from ..models import Paper
+from ..models import Paper, norm_date
 
 BASE = "https://api.semanticscholar.org"
 
@@ -46,7 +46,7 @@ class SemanticScholarClient:
         url = f"{BASE}/recommendations/v1/papers/forpaper/arXiv:{clean}"
         params = {
             "limit": limit,
-            "fields": "title,abstract,externalIds,url,year,authors",
+            "fields": "title,abstract,externalIds,url,year,publicationDate,authors",
         }
         try:
             data = self._get(url, params)
@@ -70,7 +70,10 @@ class SemanticScholarClient:
                 title=title,
                 abstract=item.get("abstract") or "",
                 authors=authors,
-                published=str(item.get("year") or ""),
+                # publicationDate 更精确（"2026-03-15"），没有才退回年份；
+                # 补齐成 YYYY-MM-DD 由 norm_date 统一负责（见其注释）
+                published=norm_date(item.get("publicationDate"))
+                          or norm_date(item.get("year")),
                 pdf_url=f"https://arxiv.org/pdf/{arxiv_id}" if arxiv_id else "",
                 abs_url=item.get("url") or "",
                 source="s2",

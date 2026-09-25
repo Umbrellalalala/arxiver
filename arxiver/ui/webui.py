@@ -42,10 +42,12 @@ class Api:
         self._llm: LLMClient | None = None
         self._summary_cache: dict[str, str] = {}
         self._s2: SemanticScholarClient | None = None
+        self._s2_key = cfg.get("semanticscholar_key", "") or ""
         self._scholar: ScholarClient | None = None
         self._cancels: dict[str, threading.Event] = {}  # 批量任务按类型各一个中断标志
         self._dl_tasks: list[dict] = []   # 下载任务列表（进行中 + 已完成）
         self._dl_lock = threading.Lock()
+        self._dl_load()                   # 重启后还能看到上次的记录
         # 串行化所有「后端 → 前端」推送：同步线程、下载线程、定时任务线程
         # 都会调 evaluate_js，并发调用可能让前端收到交错的脚本。
         self._push_lock = threading.Lock()
@@ -593,8 +595,11 @@ class Api:
         clean = arxiv_id.split("v")[0]
         if clean.startswith("local:"):
             return []
-        if self._s2 is None:
-            self._s2 = SemanticScholarClient(self.cfg.get("semanticscholar_key", ""))
+        # 同 Pipeline.s2：设置里改了 key 要立刻生效，不重建就得等到重启
+        key = self.cfg.get("semanticscholar_key", "") or ""
+        if self._s2 is None or self._s2_key != key:
+            self._s2 = SemanticScholarClient(key)
+            self._s2_key = key
         papers = self._s2.related(clean, limit=limit)
         # 相似论文入库（带 arxiv_id 的），批量翻译/摘要自然覆盖它们
         self.lib.upsert([p for p in papers if p.arxiv_id])
@@ -694,24 +699,82 @@ class Api:
             return "0.0MB"
         return f"{n / 1024 / 1024:.1f}MB"
 
-    def _dl_task_add(self, arxiv_id: str, title: str) -> dict:
-        """登记一个下载任务（进行中），插入列表头部并通知前端."""
+    def _dl_task_add(self, arxiv_id: str, title: str, started: bool = False) -> dict:
+        """登记一个下载任务（进行中），插入列表头部并通知前端.
+
+        started=False 表示还在排队（批量下载时前面的没传完），这种任务可以取消。
+        """
         task = {
             "id": uuid.uuid4().hex[:8],
             "arxiv_id": arxiv_id,
             "title": title,
-            "status": "downloading",   # downloading / done / failed
+            "status": "downloading",   # downloading / done / failed / skipped
             "progress": 0,             # 0-100
-            "detail": "排队中…",
+            "detail": "排队中…" if not started else "准备中…",
             "path": "",
             "error": "",
             "size": 0,
             "done_size": 0,
+            "started": bool(started),
         }
         with self._dl_lock:
             self._dl_tasks.insert(0, task)
+        self._dl_persist()
         self._push("Arxiver.onDownloadChange()")
         return task
+
+    def _dl_load(self) -> None:
+        """重启后仍能看到上次的下载记录（原来 _dl_tasks 只在内存里，一重启就空）。"""
+        try:
+            f = BASE_DIR / "downloads.json"
+            if not f.exists():
+                return
+            rows = json.loads(f.read_text(encoding="utf-8"))
+            for t in rows if isinstance(rows, list) else []:
+                if not isinstance(t, dict) or not t.get("id"):
+                    continue
+                if t.get("status") == "downloading":
+                    # 进程都没了，别接着显示转圈
+                    t["status"], t["detail"] = "failed", "上次运行时被中断"
+                    t.setdefault("error", "未完成的下载已中断")
+                self._dl_tasks.append(t)
+            if self._dl_tasks:
+                log.info("恢复下载记录 %d 条", len(self._dl_tasks))
+        except Exception as e:
+            log.warning("读下载记录失败: %s", e)
+
+    def _dl_persist(self) -> None:
+        """只在状态真的变了时写盘（进度回调太频繁，不跟着写）。"""
+        try:
+            with self._dl_lock:
+                rows = self._dl_tasks[:200]
+                text = json.dumps(rows, ensure_ascii=False)
+            atomic_write_text(BASE_DIR / "downloads.json", text)
+        except Exception as e:
+            log.warning("写下载记录失败: %s", e)
+
+    def _dl_skipped(self, tid: str) -> bool:
+        with self._dl_lock:
+            return any(t["id"] == tid and t["status"] == "skipped" for t in self._dl_tasks)
+
+    def skip_download(self, tid: str) -> dict:
+        """取消一个还在排队的下载。
+
+        已经在传的那条要中途停得连接层配合，这里不做假动作——所以前端只在
+        「排队中」的任务上给 ✕。
+        """
+        with self._dl_lock:
+            for t in self._dl_tasks:
+                if t["id"] == tid:
+                    if t["status"] != "downloading" or t.get("started"):
+                        return {"ok": False, "msg": "这条已经在传或已结束，取消不了"}
+                    t["status"], t["detail"] = "skipped", "已取消（还没开始传）"
+                    break
+            else:
+                return {"ok": False, "msg": "找不到该任务"}
+        self._dl_persist()
+        self._push("Arxiver.onDownloadChange()")
+        return {"ok": True}
 
     def _dl_task_update(self, tid: str, **kw) -> None:
         """更新任务字段并通知前端刷新."""
@@ -720,6 +783,8 @@ class Api:
                 if t["id"] == tid:
                     t.update(kw)
                     break
+        if "status" in kw or "started" in kw:
+            self._dl_persist()
         self._push("Arxiver.onDownloadChange()")
 
     def get_download_tasks(self) -> list:
@@ -733,6 +798,7 @@ class Api:
             before = len(self._dl_tasks)
             self._dl_tasks = [t for t in self._dl_tasks if t["status"] == "downloading"]
             removed = before - len(self._dl_tasks)
+        self._dl_persist()
         self._push("Arxiver.onDownloadChange()")
         return removed
 
@@ -748,7 +814,7 @@ class Api:
             categories=p["categories"].split(", ") if p["categories"] else [],
             published=p["published"], pdf_url=p["pdf_url"], abs_url=p["abs_url"],
         )
-        task = self._dl_task_add(arxiv_id, p["title"])
+        task = self._dl_task_add(arxiv_id, p["title"], started=True)
 
         def _work():
             try:
@@ -787,10 +853,15 @@ class Api:
         """
         from ..core.models import Paper
         rows = self.lib.get_papers(limit=limit, order="score DESC")
+        # local: 是导入的本地 PDF，根本没有 arXiv 编号可下。正常都有 local_path
+        # 会被下一条过滤掉，但用户在磁盘上删掉它之后 local_path 被清空，就会漏到
+        # 这里来，然后去抓 https://arxiv.org/pdf/local:xxx。
         papers = [Paper(
             arxiv_id=r["arxiv_id"], title=r["title"],
             published=r["published"],
-        ) for r in rows if r["arxiv_id"] and not r["local_path"]]
+        ) for r in rows
+            if r["arxiv_id"] and not r["local_path"]
+            and not r["arxiv_id"].startswith("local:")]
         total = len(papers)
         if not total:
             return {"started": False, "count": 0, "msg": "评分靠前的论文都已下载"}
@@ -799,7 +870,10 @@ class Api:
         def _work():
             try:
                 for i, (pp, task) in enumerate(zip(papers, tasks), 1):
-                    self._dl_task_update(task["id"], detail=f"第 {i}/{total} 篇")
+                    if self._dl_skipped(task["id"]):
+                        log.info("下载已取消（排队时被撤）: %s", pp.title)
+                        continue
+                    self._dl_task_update(task["id"], started=True, detail=f"第 {i}/{total} 篇")
                     try:
                         path = self.pipeline.downloader.download(pp)
                         if path:

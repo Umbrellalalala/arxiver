@@ -40,6 +40,7 @@ ALL_STEPS = (
     ("后端：引用数按分数取前 N（不是抓取顺序）", "py", "test_citation_order.py"),
     ("后端：Api 推送链路", "py", "test_api_push.py"),
     ("后端：应用启动流程（无 GUI）", "py", "test_app_startup.py"),
+    ("后端：交互回归（主题误触发同步/归档误杀/并发写文件等 78 项）", "py", "test_ux_regress.py"),
     ("前端：增量刷新逻辑", "node", "test_live_refresh.js"),
     ("端到端：重放后端推送到 DOM", "node", "test_push_to_dom.js"),
     ("产物：dist/Arxiver.exe 静态校验", "py", "verify_build.py"),
@@ -147,22 +148,31 @@ def selfcheck() -> bool:
             ok = False
 
     with tempfile.TemporaryDirectory(prefix="arxiver-test-plan-") as tmp:
-        # 空环境 + 有 node：产物两层应该被跳过，其余 7 项照跑
+        # 数字一律从 ALL_STEPS 推，别写死：写死后每加一个测试就得记得来改这里，
+        # 忘了就是「自检本身在骗人」。
+        n_total = len(ALL_STEPS)
+        n_exe = len(EXE_FILES)
+
+        # 空环境 + 有 node：产物两层应该被跳过，其余照跑
         s, sk, missing = plan(root=tmp, node="/fake/node", node_known=True)
         expect(missing is True, "空环境判定 missing_exe=True", str(missing))
-        expect(len(s) == 7, "空环境仍有 7 项可跑", f"实际 {len(s)}")
-        expect(len(sk) == 2, "产物两层进了 skipped（不是凭空消失）", str(sk))
+        expect(len(s) == n_total - n_exe, f"空环境仍有 {n_total - n_exe} 项可跑",
+               f"实际 {len(s)}")
+        expect(len(sk) == n_exe, "产物两层进了 skipped（不是凭空消失）", str(sk))
         expect(all(any(k in t for k in ("静态校验", "真实 exe")) for t in sk),
                "skipped 里确实是被跳过的产物两层", str(sk))
 
-        # 无 node：前端两层也进 skipped，共 4 项
+        # 无 node：前端两层也进 skipped
         s2, sk2, _ = plan(root=tmp, node=None, node_known=True)
-        expect(len(sk2) == 4, "无 node → 跳过 4 项（前端 2 + 产物 2）", str(sk2))
-        expect(len(s2) == 5, "无 node → 只剩 5 项可跑", f"实际 {len(s2)}")
+        expect(len(sk2) == n_exe + 2, f"无 node → 跳过 {n_exe + 2} 项（前端 2 + 产物 2）",
+               str(sk2))
+        expect(len(s2) == n_total - n_exe - 2, "无 node → 只剩后端各项可跑",
+               f"实际 {len(s2)}")
 
-        # 编号必须连续覆盖 1..9，跳过项也在里面（汇总才看得出「第几项没跑」）
+        # 编号必须连续覆盖 1..N，跳过项也在里面（汇总才看得出「第几项没跑」）
         nums = sorted(int(t.split("/")[0]) for t in [l for l, _ in s2] + sk2)
-        expect(nums == list(range(1, 10)), "9 个编号连续且都出现过", str(nums))
+        expect(nums == list(range(1, n_total + 1)),
+               f"{n_total} 个编号连续且都出现过", str(nums))
 
     print("\n自检结果:", "PASS" if ok else "FAIL")
     return ok

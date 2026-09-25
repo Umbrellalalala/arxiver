@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from pathlib import Path
 
 __all__ = [
@@ -35,15 +36,28 @@ def ensure_dirs() -> None:
 
 
 def atomic_write_text(path: str | Path, text: str, encoding: str = "utf-8") -> None:
-    """先写 .tmp 再 os.replace，避免写入中途崩溃/断电把文件截断成空。"""
+    """先写临时文件再 os.replace，避免写入中途崩溃/断电把文件截断成空。
+
+    临时名必须**每次不同**：下载记录（downloads.json）会被多个下载线程同时
+    写，共用一个 `.tmp` 时两个线程会互相截断对方的写入，再各自 replace 一次，
+    结果是「文件里躺着半条 JSON」。
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    with open(tmp, "w", encoding=encoding) as f:
-        f.write(text)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
+    tmp = path.with_name(
+        f"{path.name}.{os.getpid()}.{threading.get_ident():x}.tmp")
+    try:
+        with open(tmp, "w", encoding=encoding) as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            tmp.unlink()          # 别让失败的临时文件留在数据目录里
+        except OSError:
+            pass
+        raise
 
 
 def resource_path(rel: str) -> Path:

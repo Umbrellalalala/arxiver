@@ -21,6 +21,7 @@ from .pipeline import Pipeline
 __all__ = ["Scheduler", "scheduler"]
 
 _RETRY_SECONDS = 300  # 同步失败后 5 分钟重试
+_BUSY_RETRY_SECONDS = 20  # 只是被并发守卫挡了一下，很快再来
 
 
 class Scheduler:
@@ -50,6 +51,14 @@ class Scheduler:
                 except Exception as e:
                     log.error("自动同步异常（第 %d 次）：%s，%.0f 秒后重试", attempt, e, _RETRY_SECONDS)
                     time.sleep(_RETRY_SECONDS)
+                    continue
+                if stat.get("skipped"):
+                    # 不是失败，是并发守卫让路（比如开机自动同步还没跑完）。
+                    # 等一小会儿再来：按「没抓到论文」去睡 5 分钟的话，
+                    # 08:00 的定时同步可能就此让位给一次手动刷新，当天不再抓。
+                    log.info("自动同步让路（第 %d 次）：%s，%.0f 秒后重试",
+                             attempt, stat.get("reason", ""), _BUSY_RETRY_SECONDS)
+                    time.sleep(_BUSY_RETRY_SECONDS)
                     continue
                 if stat.get("papers", 0) > 0:
                     log.info("自动同步成功（第 %d 次尝试）：%d 篇候选，新增 %d 篇",
